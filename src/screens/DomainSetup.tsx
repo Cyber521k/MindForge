@@ -10,6 +10,11 @@ const DOMAIN_ICONS: Record<string, string> = {
   "Social Science": "🌐",
   Professional: "💼",
   Other: "📚",
+  Agent_Frameworks: "🤖",
+  Programming_Languages: "💻",
+  Blockchain_Web3: "🔗",
+  DevOps_Infrastructure: "🖥",
+  Security_Cryptography: "🛡",
 };
 
 export function DomainSetup({ onStart }: { onStart?: (subjects: string[], tier: string) => void }) {
@@ -19,6 +24,7 @@ export function DomainSetup({ onStart }: { onStart?: (subjects: string[], tier: 
   const [tier, setTier] = useState("1");
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [searchQuery, setSearchQuery] = useState("");
 
   const load = useCallback(() => {
     setLoading(true);
@@ -68,6 +74,31 @@ export function DomainSetup({ onStart }: { onStart?: (subjects: string[], tier: 
     return selected.size * 25 * (tier === "1" ? 1 : tier === "2" ? 2 : 3);
   }, [selected, tier]);
 
+  // Filter domains based on search query
+  const filteredCategories = useMemo(() => {
+    const cats = taxonomy.categories || {};
+    if (!searchQuery.trim()) return cats;
+
+    const filtered: Record<string, string[]> = {};
+    const q = searchQuery.toLowerCase();
+    for (const [domain, subjects] of Object.entries(cats)) {
+      const matched = (subjects as string[]).filter((s) =>
+        s.toLowerCase().includes(q) || domain.toLowerCase().includes(q)
+      );
+      if (matched.length > 0) {
+        filtered[domain] = matched;
+      }
+    }
+    return filtered;
+  }, [taxonomy.categories, searchQuery]);
+
+  const totalSubjects = useMemo(() => {
+    return Object.values(taxonomy.categories || {}).reduce(
+      (sum, subjects) => sum + (subjects as string[]).length,
+      0
+    );
+  }, [taxonomy.categories]);
+
   if (loading)
     return <LoadingState message="Loading taxonomy..." />;
 
@@ -81,11 +112,50 @@ export function DomainSetup({ onStart }: { onStart?: (subjects: string[], tier: 
 
   return (
     <div style={{ padding: 24, overflowY: "auto", height: "100%" }}>
-      <h1 style={{ fontSize: 24, marginBottom: 20, color: "var(--accent)" }}>Domain Setup</h1>
+      <h1 style={{ fontSize: 24, marginBottom: 16, color: "var(--accent)" }}>Domain Setup</h1>
+
+      {/* Search filter */}
+      <div style={{ marginBottom: 16 }}>
+        <input
+          type="text"
+          value={searchQuery}
+          onChange={(e) => setSearchQuery(e.target.value)}
+          placeholder="Search subjects across all domains..."
+          aria-label="Filter subjects"
+          style={{
+            width: "100%",
+            padding: "10px 14px",
+            background: "var(--surface-raised)",
+            border: "1px solid var(--border)",
+            borderRadius: 6,
+            color: "var(--text)",
+            fontSize: 14,
+            outline: "none",
+          }}
+        />
+        {searchQuery && (
+          <button
+            onClick={() => setSearchQuery("")}
+            style={{
+              position: "absolute",
+              right: 38,
+              marginTop: -34,
+              background: "transparent",
+              border: "none",
+              cursor: "pointer",
+              fontSize: 16,
+              color: "var(--text-dim)",
+            }}
+            aria-label="Clear search"
+          >
+            ✕
+          </button>
+        )}
+      </div>
 
       {/* Domain sections */}
-      {Object.entries(taxonomy.categories || {}).map(([domain, subjects]) => {
-        const isExpanded = expanded.has(domain);
+      {Object.entries(filteredCategories).map(([domain, subjects]) => {
+        const isExpanded = expanded.has(domain) || !!searchQuery.trim();
         const domainSubjects = subjects as string[];
         const selectedInDomain = domainSubjects.filter((s) => selected.has(s)).length;
         const icon = DOMAIN_ICONS[domain] || "📚";
@@ -115,14 +185,25 @@ export function DomainSetup({ onStart }: { onStart?: (subjects: string[], tier: 
             >
               <span style={{ display: "flex", alignItems: "center", gap: 8, fontSize: 15, fontWeight: 600 }}>
                 <span>{icon}</span>
-                {domain} ({domainSubjects.length})
+                {domain.replace(/_/g, " ")}
+                {/* Subject count badge */}
+                <span style={{
+                  fontSize: 11,
+                  padding: "1px 8px",
+                  borderRadius: 10,
+                  background: "var(--surface-raised)",
+                  color: "var(--text-secondary)",
+                  fontWeight: 500,
+                }}>
+                  {domainSubjects.length}
+                </span>
                 {selectedInDomain > 0 && (
                   <span style={{ fontSize: 11, padding: "1px 6px", borderRadius: 3, background: "var(--accent-secondary)", color: "var(--bg)" }}>
                     {selectedInDomain} selected
                   </span>
                 )}
               </span>
-              <span style={{ color: "var(--text-dim)" }}>{isExpanded ? "▼" : "▶"}</span>
+              <span style={{ color: "var(--text-dim)" }} aria-hidden="true">{isExpanded ? "▼" : "▶"}</span>
             </div>
             {isExpanded && (
               <div style={{ padding: "8px 16px" }}>
@@ -153,7 +234,7 @@ export function DomainSetup({ onStart }: { onStart?: (subjects: string[], tier: 
                       borderLeft: selected.has(s) ? "3px solid var(--accent)" : "3px solid transparent",
                     }}
                   >
-                    <span style={{ color: selected.has(s) ? "var(--accent)" : "var(--text-dim)" }}>
+                    <span style={{ color: selected.has(s) ? "var(--accent)" : "var(--text-dim)" }} aria-hidden="true">
                       {selected.has(s) ? "✓" : "○"}
                     </span>
                     {s.replace(/_/g, " ")}
@@ -164,6 +245,12 @@ export function DomainSetup({ onStart }: { onStart?: (subjects: string[], tier: 
           </div>
         );
       })}
+
+      {Object.keys(filteredCategories).length === 0 && (
+        <div className="panel" style={{ padding: 24, textAlign: "center", color: "var(--text-dim)", fontSize: 14 }}>
+          No subjects match "{searchQuery}"
+        </div>
+      )}
 
       {/* Probing Depth */}
       <div className="panel" style={{ padding: 16, marginBottom: 16 }}>
@@ -199,7 +286,7 @@ export function DomainSetup({ onStart }: { onStart?: (subjects: string[], tier: 
               background: tier === t ? "var(--surface-raised)" : "transparent",
             }}
           >
-            <span style={{ color: tier === t ? "var(--accent)" : "var(--text-dim)" }}>
+            <span style={{ color: tier === t ? "var(--accent)" : "var(--text-dim)" }} aria-hidden="true">
               {tier === t ? "✓" : "○"}
             </span>
             {label}
@@ -210,7 +297,7 @@ export function DomainSetup({ onStart }: { onStart?: (subjects: string[], tier: 
       {/* Summary + Actions */}
       <div className="panel-raised" style={{ padding: 16, marginBottom: 16 }}>
         <div style={{ fontSize: 14, marginBottom: 8 }}>
-          Selected: <span style={{ color: "var(--accent)" }}>{selected.size} subjects</span>
+          Selected: <span style={{ color: "var(--accent)" }}>{selected.size}</span> / {totalSubjects} subjects
         </div>
         <div style={{ fontSize: 13, color: "var(--text-secondary)", marginBottom: 12 }}>
           Estimated questions: ~{estimatedQuestions} (Tier {tier})

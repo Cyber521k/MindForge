@@ -64,6 +64,64 @@ categories:
     - medical_genetics
     - nutrition
     - professional_psychology
+  Agent_Frameworks:
+    - hermes_agent
+    - pi_agent
+    - openclaw
+    - clawcode
+    - autogpt
+    - crewai
+    - langchain
+    - llamaindex
+    - autogen
+    - metagpt
+    - chatdev
+    - babyagi
+  Programming_Languages:
+    - python
+    - javascript
+    - typescript
+    - rust
+    - go
+    - cpp
+    - java
+    - csharp
+    - ruby
+    - swift
+    - kotlin
+    - haskell
+    - elixir
+    - zig
+    - nim
+    - lua
+  Blockchain_Web3:
+    - solidity
+    - vyper
+    - move
+    - cairo
+    - solana
+    - cosmos
+    - clarity
+    - plutus
+    - foundry
+    - hardhat
+    - web3js
+    - ethersjs
+    - defi
+    - nft
+  DevOps_Infrastructure:
+    - docker
+    - kubernetes
+    - terraform
+    - ci_cd
+    - cloud_aws
+    - cloud_gcp
+    - cloud_azure
+  Security_Cryptography:
+    - cryptography
+    - secure_coding
+    - pentesting
+    - network_security
 
 # Mapping from user-friendly subject names to MMLU subject keys
 subject_mapping:
@@ -104,3 +162,76 @@ subject_mapping:
   global_facts: global_facts
   security_studies: security_studies
   computer_security: computer_security
+  # Agent Frameworks aliases
+  hermes: hermes_agent
+  hermes_agent: hermes_agent
+  pi_agent: pi_agent
+  openclaw: openclaw
+  clawcode: clawcode
+  autogpt: autogpt
+  crewai: crewai
+  langchain: langchain
+  llamaindex: llamaindex
+  autogen: autogen
+  metagpt: metagpt
+  chatdev: chatdev
+  babyagi: babyagi
+  # Programming Languages aliases
+  py: python
+  python: python
+  js: javascript
+  javascript: javascript
+  ts: typescript
+  typescript: typescript
+  rust: rust
+  go: go
+  cpp: cpp
+  c++: cpp
+  java: java
+  csharp: csharp
+  c#: csharp
+  ruby: ruby
+  swift: swift
+  kotlin: kotlin
+  haskell: haskell
+  elixir: elixir
+  zig: zig
+  nim: nim
+  lua: lua
+  # Blockchain/Web3 aliases
+  solidity: solidity
+  vyper: vyper
+  move: move
+  cairo: cairo
+  solana: solana
+  cosmos: cosmos
+  clarity: clarity
+  plutus: plutus
+  foundry: foundry
+  hardhat: hardhat
+  web3js: web3js
+  ethersjs: ethersjs
+  defi: defi
+  nft: nft
+  # DevOps/Infrastructure aliases
+  docker: docker
+  k8s: kubernetes
+  kubernetes: kubernetes
+  tf: terraform
+  terraform: terraform
+  ci_cd: ci_cd
+  cicd: ci_cd
+  cloud_aws: cloud_aws
+  aws: cloud_aws
+  cloud_gcp: cloud_gcp
+  gcp: cloud_gcp
+  cloud_azure: cloud_azure
+  azure: cloud_azure
+  # Security/Cryptography aliases
+  cryptography: cryptography
+  crypto: cryptography
+  secure_coding: secure_coding
+  pentesting: pentesting
+  pentest: pentesting
+  network_security: network_security
+  netsec: network_security

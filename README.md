@@ -89,9 +89,11 @@ Probes the model against MMLU questions and generates DPO training data at `data
 
 Options:
 - `--model`   : MLX model name (default: mlx-community/Llama-3.2-3B-Instruct-4bit)
-- `--subject` : Subject to probe (default: mathematics)
+- `--subject` : Subject to probe (default: mathematics). Supports aliases (e.g. `py`, `js`, `k8s`, `aws`).
 - `--tier`    : Probing tier, 1-3 (default: 1)
 - `--limit`   : Number of questions (default: 25)
+
+Available subjects: 110 across 10 categories (57 MMLU + 53 extended). Run `mindforge models` or see `taxonomy/subjects.yaml` for the full list.
 
 ### Review Training Entries
 
@@ -284,7 +286,31 @@ The Rust backend (`src-tauri/src/main.rs`) provides IPC commands for managing th
 
 ## Supported Subjects
 
-All 57 MMLU subjects across STEM, Humanities, Social Science, Professional, and Other categories. See `taxonomy/subjects.yaml` for the full list.
+110 subjects across 10 categories. See `taxonomy/subjects.yaml` for the full list.
+
+### Original MMLU Categories (57 subjects)
+
+| Category | Count | Examples |
+|----------|-------|----------|
+| STEM | 14 | mathematics, physics, chemistry, biology, computer science |
+| Humanities | 12 | history, philosophy, moral disputes, world religions |
+| Social Science | 11 | economics, psychology, sociology, geography |
+| Professional | 13 | law, medicine, accounting, electrical engineering |
+| Other | 7 | anatomy, marketing, nutrition, professional psychology |
+
+### Extended Categories (53 subjects)
+
+| Category | Count | Examples |
+|----------|-------|----------|
+| Agent Frameworks | 12 | hermes_agent, langchain, autogen, crewai, babyagi |
+| Programming Languages | 16 | python, rust, go, typescript, swift, zig, nim |
+| Blockchain/Web3 | 14 | solidity, solana, cosmos, defi, nft, foundry |
+| DevOps/Infrastructure | 7 | docker, kubernetes, terraform, AWS, GCP, Azure |
+| Security/Cryptography | 4 | cryptography, secure coding, pentesting, network security |
+
+### Subject Aliases
+
+Common abbreviations are mapped automatically. Examples: `py`->python, `js`->javascript, `ts`->typescript, `c++`->cpp, `c#`->csharp, `k8s`->kubernetes, `tf`->terraform, `aws`->cloud_aws, `gcp`->cloud_gcp, `azure`->cloud_azure, `crypto`->cryptography, `pentest`->pentesting, `netsec`->network_security, `hermes`->hermes_agent.
 
 ## Output Format
 

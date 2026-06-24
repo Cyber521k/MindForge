@@ -327,6 +327,74 @@ async def get_taxonomy():
         raise HTTPException(status_code=500, detail=f"Taxonomy load failed: {e}")
 
 
+async def _load_taxonomy() -> dict:
+    """Load and return the taxonomy YAML (shared helper)."""
+    tax_path = os.path.join(_PROJECT_ROOT, "taxonomy", "subjects.yaml")
+
+    def _load():
+        import yaml
+
+        with open(tax_path, "r") as f:
+            return yaml.safe_load(f)
+
+    try:
+        return await asyncio.to_thread(_load)
+    except FileNotFoundError:
+        raise HTTPException(status_code=404, detail=f"Taxonomy file not found: {tax_path}")
+    except Exception as e:
+        logger.error(f"Taxonomy load failed: {e}")
+        raise HTTPException(status_code=500, detail=f"Taxonomy load failed: {e}")
+
+
+@app.get("/api/taxonomy/search")
+async def search_taxonomy(q: str):
+    """Search subjects across all domains by keyword."""
+    if not q or not q.strip():
+        raise HTTPException(status_code=400, detail="Query parameter 'q' is required")
+
+    query = q.strip().lower()
+    data = await _load_taxonomy()
+    categories = data.get("categories", {})
+
+    results = []
+    for domain, subjects in categories.items():
+        for subject in subjects:
+            if query in subject.lower():
+                results.append({"domain": domain, "subject": subject})
+
+    return {
+        "query": q,
+        "results": results,
+        "count": len(results),
+    }
+
+
+@app.get("/api/taxonomy/{domain}")
+async def get_taxonomy_domain(domain: str):
+    """Get all subjects for a single domain."""
+    data = await _load_taxonomy()
+    categories = data.get("categories", {})
+
+    # Case-insensitive match
+    matched_key = None
+    for key in categories:
+        if key.lower() == domain.lower():
+            matched_key = key
+            break
+
+    if matched_key is None:
+        raise HTTPException(
+            status_code=404,
+            detail=f"Domain '{domain}' not found. Available: {', '.join(sorted(categories.keys()))}",
+        )
+
+    return {
+        "domain": matched_key,
+        "subjects": categories[matched_key],
+        "count": len(categories[matched_key]),
+    }
+
+
 @app.get("/api/responses")
 async def get_responses():
     """Get probe results from the SQLite database."""

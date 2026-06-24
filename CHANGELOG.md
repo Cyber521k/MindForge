@@ -2,6 +2,25 @@
 
 All notable changes to MindForge are documented in this file.
 
+## [7.1.0] - 2026-06-24 (Domain Expansion)
+
+### Added
+
+- **5 new subject categories** (53 new subjects, 110 total):
+  - Agent Frameworks (12): hermes_agent, langchain, autogen, crewai, babyagi, etc.
+  - Programming Languages (16): python, rust, go, typescript, swift, zig, nim, etc.
+  - Blockchain/Web3 (14): solidity, solana, cosmos, defi, nft, foundry, etc.
+  - DevOps/Infrastructure (7): docker, kubernetes, terraform, AWS, GCP, Azure
+  - Security/Cryptography (4): cryptography, secure coding, pentesting, network security
+- **48 subject aliases** (105 total mappings): py->python, js->javascript, ts->typescript, c++->cpp, c#->csharp, k8s->kubernetes, tf->terraform, cicd->ci_cd, aws->cloud_aws, gcp->cloud_gcp, azure->cloud_azure, crypto->cryptography, pentest->pentesting, netsec->network_security, hermes->hermes_agent
+
+### Changed
+
+- Subject count: 57 -> 110 (53 new extended subjects)
+- Category count: 5 -> 10 (5 new extended categories)
+- Subject mappings: 57 -> 105 (48 new aliases)
+- taxonomy/subjects.yaml: added Agent_Frameworks, Programming_Languages, Blockchain_Web3, DevOps_Infrastructure, Security_Cryptography categories
+
 ## [7.0.2] - 2026-06-24 (Round 3)
 
 ### Added

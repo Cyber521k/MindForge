@@ -68,49 +68,36 @@ The program presents the full list of benchmarked domains. The user picks any co
 
 ### Domain Catalog
 
-The taxonomy is based on MMLU's 57 subjects plus extensions, organized into top-level domains:
+The taxonomy includes MMLU's 57 original subjects plus 53 extended subjects across 10 categories, organized into top-level domains:
 
 ```
 ┌─────────────────────────────────────────────────────────────┐
-│  MINDFORGE -- Domain Selection                              │
+│  MINDFORGE -- Domain Selection (110 subjects, 10 categories) │
 ├─────────────────────────────────────────────────────────────┤
 │                                                             │
-│  STEM (17 subjects)                                         │
-│  [X] mathematics       algebra, calculus, statistics,      │
-│                        discrete math, geometry              │
-│  [ ] physics           mechanics, E&M, thermo, quantum      │
-│  [ ] chemistry         organic, inorganic, analytical       │
-│  [ ] biology           genetics, ecology, cell bio, evo     │
-│  [ ] computer_science  algorithms, architecture, networks  │
-│  [ ] engineering       civil, electrical, mechanical       │
-│  ... 12 more                                               │
+│  ORIGINAL MMLU CATEGORIES (57 subjects)                     │
+│  STEM (14)        mathematics, physics, chemistry, biology, │
+│                    computer science, astronomy, algebra...   │
+│  Humanities (12)  history, philosophy, moral disputes,      │
+│                    world religions, jurisprudence...         │
+│  Social Science   economics, psychology, sociology,         │
+│    (11)           geography, public relations...             │
+│  Professional(13) law, medicine, accounting, engineering,   │
+│                    computer security, virology...            │
+│  Other (7)        anatomy, marketing, nutrition,            │
+│                    professional psychology...                │
 │                                                             │
-│  HUMANITIES (11 subjects)                                   │
-│  [ ] history           world, US, European, Asian          │
-│  [ ] philosophy        ethics, logic, metaphysics          │
-│  [ ] literature        American, British, world            │
-│  [ ] religion          Christianity, Buddhism, Islam        │
-│  ... 7 more                                               │
-│                                                             │
-│  SOCIAL SCIENCE (9 subjects)                                │
-│  [ ] economics         micro, macro, econometrics           │
-│  [ ] psychology        cognitive, developmental, social     │
-│  [ ] political_science theory, comparative, IR             │
-│  [ ] sociology         theory, methods, stratification      │
-│  ... 5 more                                               │
-│
-│  PROFESSIONAL (12 subjects)                                 │
-│  [ ] law               constitutional, criminal, civil       │
-│  [ ] medicine          anatomy, pharmacology, pathology     │
-│  [ ] finance           accounting, investing, banking      │
-│  [ ] business          management, marketing, ethics       │
-│  ... 8 more                                               │
-│                                                             │
-│  OTHER (8 subjects)                                         │
-│  [ ] languages         Spanish, French, German, Chinese     │
-│  [ ] arts               music theory, art history           │
-│  [ ] culture           pop culture, sports, food            │
-│  ... 5 more                                               │
+│  EXTENDED CATEGORIES (53 subjects)                          │
+│  Agent Frameworks  hermes_agent, langchain, autogen,        │
+│    (12)            crewai, babyagi, metagpt, chatdev...      │
+│  Programming        python, rust, go, typescript, swift,    │
+│   Languages (16)    zig, nim, haskell, elixir, lua...       │
+│  Blockchain/Web3    solidity, solana, cosmos, defi, nft,    │
+│    (14)            foundry, hardhat, web3js, ethersjs...     │
+│  DevOps/Infra       docker, kubernetes, terraform,          │
+│    (7)             AWS, GCP, Azure, CI/CD...                │
+│  Security/Crypto    cryptography, secure coding,            │
+│    (4)             pentesting, network security             │
 │                                                             │
 │  [A] Select all   [N] Select none   [Enter] Confirm         │
 │  Selected: mathematics (4 topics)                           │
@@ -118,6 +105,8 @@ The taxonomy is based on MMLU's 57 subjects plus extensions, organized into top-
 │  Toggle Tier 2 (depth): [Y/N]  Toggle Tier 3 (edge): [Y/N] │
 └─────────────────────────────────────────────────────────────┘
 ```
+
+**Subject aliases** allow using common abbreviations: `py`->python, `js`->javascript, `ts`->typescript, `c++`->cpp, `c#`->csharp, `k8s`->kubernetes, `tf`->terraform, `aws`->cloud_aws, `gcp`->cloud_gcp, `azure`->cloud_azure, `crypto`->cryptography, `pentest`->pentesting, `netsec`->network_security, `hermes`->hermes_agent. See `taxonomy/subjects.yaml` for the full mapping.
 
 **Key design decisions:**
 - The full domain list is always shown -- nothing is hidden
@@ -129,53 +118,58 @@ The taxonomy is based on MMLU's 57 subjects plus extensions, organized into top-
 
 ### Taxonomy File
 
-The full taxonomy is stored in `taxonomy/subjects.yaml`:
+The full taxonomy is stored in `taxonomy/subjects.yaml` with 110 subjects across 10 categories:
 
 ```yaml
-domains:
-  stem:
-    name: STEM
-    subjects:
-      mathematics:
-        name: Mathematics
-        topics:
-          - algebra
-          - calculus
-          - statistics
-          - discrete_math
-          - geometry
-      physics:
-        name: Physics
-        topics:
-          - classical_mechanics
-          - electromagnetism
-          - thermodynamics
-          - quantum_mechanics
-          - optics
-      # ... etc
-  humanities:
-    name: Humanities
-    subjects:
-      history:
-        name: History
-        topics:
-          - world_history
-          - us_history
-          - european_history
-          - asian_history
-      # ... etc
-  social_science:
-    name: Social Science
+categories:
+  STEM:                    # 14 subjects (original MMLU)
+    - abstract_algebra
+    - astronomy
+    - college_biology
     # ... etc
-  professional:
-    name: Professional
+  Humanities:              # 12 subjects (original MMLU)
+    - history
+    - philosophy
     # ... etc
-  other:
-    name: Other
+  Social Science:          # 11 subjects (original MMLU)
+  Professional:            # 13 subjects (original MMLU)
+  Other:                   # 7 subjects (original MMLU)
+  Agent_Frameworks:        # 12 subjects (extended)
+    - hermes_agent
+    - langchain
+    - autogen
+    - crewai
     # ... etc
+  Programming_Languages:   # 16 subjects (extended)
+    - python
+    - rust
+    - go
+    - typescript
+    # ... etc
+  Blockchain_Web3:         # 14 subjects (extended)
+    - solidity
+    - solana
+    # ... etc
+  DevOps_Infrastructure:   # 7 subjects (extended)
+    - docker
+    - kubernetes
+    # ... etc
+  Security_Cryptography:   # 4 subjects (extended)
+    - cryptography
+    - pentesting
+    # ... etc
+
+# Subject aliases (105 mappings)
+subject_mapping:
+  mathematics: high_school_mathematics
+  py: python
+  js: javascript
+  k8s: kubernetes
+  aws: cloud_aws
+  # ... etc
 ```
 
-Users can edit this file to add custom subjects or topics at any time.
+Users can edit this file to add custom subjects, categories, or aliases at any time.
 
 ### Probing Strategy (3-Tier Depth)
 

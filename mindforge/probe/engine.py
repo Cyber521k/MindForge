@@ -18,6 +18,7 @@ from mindforge.probe.adapters import create_adapter, extract_answer_letter
 from mindforge.probe.question_gen import (
     resolve_subject, load_mmlu_questions, format_mcq_prompt,
     generate_tier2_followups, generate_tier3_edge_cases,
+    is_custom_subject, generate_custom_questions,
 )
 from mindforge.score.answer_key import score_answer
 from mindforge.score.confidence import compute_confidence, compute_confidence_with_judge
@@ -120,8 +121,12 @@ class ProbeEngine:
         print(f"{'='*60}\n")
 
         # Step 1: Load questions
-        print("Loading MMLU questions...")
-        questions = load_mmlu_questions(self.mmlu_subject, limit=self.limit)
+        if is_custom_subject(self.mmlu_subject):
+            print(f"Loading custom questions for '{self.mmlu_subject}'...")
+            questions = generate_custom_questions(self.mmlu_subject, limit=self.limit)
+        else:
+            print("Loading MMLU questions...")
+            questions = load_mmlu_questions(self.mmlu_subject, limit=self.limit)
         print(f"Loaded {len(questions)} questions.\n")
 
         if not questions:
