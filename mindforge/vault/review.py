@@ -107,3 +107,96 @@ def review_session(db, limit=100):
     print(f"{'='*60}\n")
 
     return stats
+
+
+def auto_review_session(db, auto_reviewer, limit=100):
+    """Run an automated review session using the AutoReviewer.
+
+    Gets pending entries, runs auto_reviewer.review_batch(), applies results
+    to the database, and prints progress and summary.
+
+    Args:
+        db: Database instance
+        auto_reviewer: AutoReviewer instance
+        limit: Maximum number of entries to review
+
+    Returns:
+        dict with review stats
+    """
+    entries = db.get_pending_entries(limit=limit)
+
+    if not entries:
+        print("\nNo pending training entries to review.")
+        return {"reviewed": 0, "accepted": 0, "rejected": 0, "edited": 0, "skipped": 0}
+
+    stats = {"reviewed": 0, "accepted": 0, "rejected": 0, "edited": 0, "skipped": 0}
+
+    print(f"\n{'='*60}")
+    print(f"  Automated Review Session")
+    print(f"  Judge model: {auto_reviewer.judge_model_name}")
+    print(f"  Web search: {'enabled' if auto_reviewer.web_search_enabled else 'disabled'}")
+    print(f"  Entries to review: {len(entries)}")
+    print(f"{'='*60}\n")
+
+    def on_progress(current, total, result):
+        action = result.get("action", "skip")
+        confidence = result.get("confidence", 0.0)
+        status_icon = {
+            "accept": "✓",
+            "reject": "✗",
+            "edit": "✎",
+        }.get(action, "?")
+        print(f"  [{current}/{total}] {status_icon} {action} (conf={confidence:.2f})")
+
+    results = auto_reviewer.review_batch(entries, on_progress=on_progress)
+
+    for i, (entry, result) in enumerate(zip(entries, results)):
+        stats["reviewed"] += 1
+        action = result.get("action", "skip")
+        confidence = result.get("confidence", 0.0)
+        explanation = result.get("explanation", "")
+
+        if action == "accept":
+            db.update_entry_status(entry["id"], "accepted")
+            db.store_review_session(entry["id"], "accept")
+            stats["accepted"] += 1
+        elif action == "reject":
+            db.update_entry_status(entry["id"], "rejected")
+            db.store_review_session(entry["id"], "reject")
+            stats["rejected"] += 1
+        elif action == "edit":
+            edited_chosen = result.get("edited_chosen")
+            edited_rejected = result.get("edited_rejected")
+            if edited_chosen:
+                db.update_training_entry(entry["id"], chosen=edited_chosen)
+            if edited_rejected:
+                db.update_training_entry(entry["id"], rejected=edited_rejected)
+            db.update_entry_status(entry["id"], "edited")
+            db.store_review_session(
+                entry["id"], "edit",
+                edited_chosen=edited_chosen,
+                edited_rejected=edited_rejected,
+            )
+            stats["edited"] += 1
+        else:
+            db.update_entry_status(entry["id"], "skipped")
+            db.store_review_session(entry["id"], "skip")
+            stats["skipped"] += 1
+
+    print(f"\n{'='*60}")
+    print(f"  Automated Review Complete")
+    print(f"{'='*60}")
+    print(f"  Reviewed: {stats['reviewed']}")
+    print(f"  Accepted: {stats['accepted']}")
+    print(f"  Rejected: {stats['rejected']}")
+    print(f"  Edited:   {stats['edited']}")
+    print(f"  Skipped:  {stats['skipped']}")
+    print(f"{'='*60}\n")
+
+    # Clean up adapter
+    try:
+        auto_reviewer.close()
+    except Exception:
+        pass
+
+    return stats

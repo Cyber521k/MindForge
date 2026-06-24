@@ -88,7 +88,7 @@ class ProbeEngine:
             pass  # Database() will handle/log this
         self.db = Database(db_path)
 
-    def run(self):
+    def run(self, auto_review=False):
         """Run the probing flow end-to-end.
 
         1. Load MMLU questions
@@ -377,6 +377,30 @@ class ProbeEngine:
                     f.write(json.dumps(dpo_entry) + "\n")
 
             print(f"  Total after supplementation: {len(dpo_entries)}")
+
+        # Optional auto-review of results
+        if auto_review and dpo_entries:
+            print("\nRunning automated review on DPO entries...")
+            try:
+                from mindforge.review.auto_reviewer import AutoReviewer
+                reviewer = AutoReviewer()
+                if reviewer.judge_adapter:
+                    review_results = reviewer.review_batch(
+                        dpo_entries,
+                        on_progress=lambda c, t, r: print(
+                            f"  [{c}/{t}] {r.get('action', '?')} (conf={r.get('confidence', 0):.2f})"
+                        ),
+                    )
+                    accepted = sum(1 for r in review_results if r["action"] == "accept")
+                    rejected = sum(1 for r in review_results if r["action"] == "reject")
+                    edited = sum(1 for r in review_results if r["action"] == "edit")
+                    print(f"  Auto-review: {accepted} accepted, {rejected} rejected, {edited} edited")
+                else:
+                    print("  Skipped auto-review: no judge model available")
+                reviewer.close()
+            except Exception as e:
+                logger.warning(f"Auto-review failed: {e}")
+                print(f"  Auto-review failed: {e}")
 
         # Cleanup
         self.adapter.close()

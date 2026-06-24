@@ -186,14 +186,43 @@ def cmd_probe(args):
 
 
 def cmd_review(args):
-    """Run review session."""
+    """Run review session (manual or automated)."""
     from mindforge.vault.database import Database
-    from mindforge.vault.review import review_session
 
     db_path = os.path.join(_project_root, "data", "mindforge.db")
     db = Database(db_path)
 
-    review_session(db, limit=args.limit)
+    if getattr(args, "auto", False):
+        # Automated review mode
+        from mindforge.review.auto_reviewer import AutoReviewer
+        from mindforge.vault.review import auto_review_session
+
+        judge_model = getattr(args, "judge_model", None)
+        web_search = not getattr(args, "no_web", False)
+
+        # Create judge adapter if a specific model is requested
+        judge_adapter = None
+        if judge_model:
+            from mindforge.probe.adapters import create_adapter
+            judge_adapter = create_adapter(judge_model)
+
+        reviewer = AutoReviewer(
+            judge_adapter=judge_adapter,
+            web_search_enabled=web_search,
+        )
+
+        if not reviewer.judge_adapter:
+            print("✗ No judge model available.")
+            print("  Tip: Set OPENAI_API_KEY or OPENROUTER_API_KEY for cloud-based review.")
+            print("  Or run Ollama locally, or use --judge-model <model> to specify a model.")
+            db.close()
+            return 1
+
+        auto_review_session(db, reviewer, limit=args.limit)
+    else:
+        # Manual review mode (default)
+        from mindforge.vault.review import review_session
+        review_session(db, limit=args.limit)
 
     db.close()
     return 0
@@ -679,6 +708,18 @@ def main():
     review_parser.add_argument(
         "--limit", type=int, default=100,
         help="Maximum entries to review (default: 100)"
+    )
+    review_parser.add_argument(
+        "--auto", action="store_true", default=False,
+        help="Run automated review using LLM-as-judge (default: manual interactive review)"
+    )
+    review_parser.add_argument(
+        "--judge-model", default=None,
+        help="Model to use as judge for auto-review (e.g., gpt-4o, openrouter/anthropic/claude-3.5-sonnet)"
+    )
+    review_parser.add_argument(
+        "--no-web", action="store_true", default=False,
+        help="Disable web search fallback for uncertain answers in auto-review"
     )
     review_parser.set_defaults(func=cmd_review)
 
