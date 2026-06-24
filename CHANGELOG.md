@@ -2,6 +2,22 @@
 
 All notable changes to MindForge are documented in this file.
 
+## [7.0.2] - 2026-06-24 (Round 3)
+
+### Added
+
+- **Xbox Blades navigation**: 3D blade sweep transitions in App.tsx (Framer Motion rotateY, perspective container)
+- **Arrow key navigation**: Left/Right or Up/Down arrows to move between screens
+- **Direction-aware transitions**: Navigation direction determines sweep direction
+- **Round 2 feature tests**: 63 new tests (test_round2_features.py) -- Ollama integration, async endpoints, DB indexes, ErrorBoundary
+
+### Changed
+
+- Test count: 504 -> 567 (63 new round 2 feature tests)
+- Test files: 11 -> 12 (added test_round2_features.py)
+- Screen transitions: simple slide -> 3D blade sweep with perspective and rotateY
+- Navigation: setScreen -> navigate() with direction tracking
+
 ## [7.0.1] - 2026-06-24 (Round 2)
 
 ### Added
@@ -50,7 +66,7 @@ All notable changes to MindForge are documented in this file.
 - **Hardware auto-detection**: Apple Silicon chip, memory, API keys, exo cluster, Ollama
 - **SQLite vault** for responses, training entries, review sessions, sources
 - **CI/CD** via GitHub Actions (Python tests on macOS, frontend build on Ubuntu)
-- **504 tests**: 8 phase test files (280), functional tests (98), E2E tests (37), edge-case tests (89)
+- **567 tests**: 8 phase test files (280), functional tests (98), E2E tests (37), edge-case tests (89), round 2 feature tests (63)
 - **Hermes skill** at ~/.hermes/skills/mlops/mindforge/
 
 ### Fixed

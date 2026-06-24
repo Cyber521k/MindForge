@@ -28,7 +28,7 @@ MindForge/
 │   ├── screens/       # 8 screen components
 │   └── components/    # Reusable UI (ErrorState, LoadingState, etc.)
 ├── src-tauri/         # Rust Tauri backend (sidecar lifecycle management)
-├── tests/             # 11 test files (phases 1-8, functional, E2E, edge cases)
+├── tests/             # 12 test files (phases 1-8, functional, E2E, edge cases, round 2 features)
 ├── taxonomy/           # MMLU subject taxonomy (57 subjects, 5 domains)
 └── .github/workflows/ # CI pipeline
 ```
@@ -186,7 +186,7 @@ Default port: 7878
 
 ## Desktop App (Tauri)
 
-The Tauri desktop app provides a GUI for all MindForge operations:
+The Tauri desktop app provides a GUI for all MindForge operations, featuring an Xbox Blades-style navigation system with 3D sweep transitions, arrow key navigation, and a game-like dashboard aesthetic:
 
 - **Model Setup** - Select and configure models
 - **Domain Setup** - Choose MMLU subjects and probing tier
@@ -234,6 +234,9 @@ python -m pytest tests/test_e2e.py -v
 
 # Run edge-case tests (error handling, boundary conditions)
 python -m pytest tests/test_edge_cases.py -v
+
+# Run round 2 feature tests (Ollama, async endpoints, DB indexes)
+python -m pytest tests/test_round2_features.py -v
 ```
 
 ## CI/CD
@@ -262,7 +265,7 @@ MindForge/
 ├── python/server.py     # FastAPI sidecar (20 routes)
 ├── src/                 # React frontend
 ├── src-tauri/           # Rust Tauri backend
-├── tests/               # 11 test files (504 tests)
+├── tests/               # 12 test files (567 tests)
 ├── taxonomy/            # MMLU subject taxonomy
 ├── setup.py             # Python package config
 ├── package.json         # Node package config

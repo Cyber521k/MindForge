@@ -2062,10 +2062,11 @@ Border:         #CD7F32   (Hermes bronze — panel borders)
 - Logo/Caduceus: The ⚕ symbol rendered large in the header with a gold glow
 
 **Motion:**
-- Panel transitions: 200ms ease-out slide
+- Panel transitions: Xbox Blades-style 3D sweep (rotateY with perspective container, direction-aware)
+- Arrow key navigation: Left/Right or Up/Down to move between blades
 - Button hover: 100ms gold glow expansion
 - Progress bars: Smooth animated fill with pulsing gold glow
-- Phase transitions: Full panel crossfade
+- Phase transitions: Full panel blade sweep with 3D rotateY
 - Loading states: Pulsing gold ring around the caduceus ⚕
 
 **Audio (optional, toggleable):**

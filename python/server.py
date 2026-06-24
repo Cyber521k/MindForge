@@ -336,11 +336,13 @@ async def get_responses():
             from mindforge.vault.database import Database
 
             db = Database(os.path.join(_PROJECT_ROOT, "data", "mindforge.db"))
-            cursor = db.conn.cursor()
-            cursor.execute("SELECT * FROM responses ORDER BY created_at DESC LIMIT 100")
-            rows = [dict(r) for r in cursor.fetchall()]
-            db.close()
-            return rows
+            try:
+                cursor = db.conn.cursor()
+                cursor.execute("SELECT * FROM responses ORDER BY created_at DESC LIMIT 100")
+                rows = [dict(r) for r in cursor.fetchall()]
+                return rows
+            finally:
+                db.close()
 
         return await asyncio.to_thread(_query)
     except Exception as e:
@@ -357,9 +359,11 @@ async def get_training_entries():
             from mindforge.vault.database import Database
 
             db = Database(os.path.join(_PROJECT_ROOT, "data", "mindforge.db"))
-            entries = db.get_all_training_entries()
-            db.close()
-            return entries
+            try:
+                entries = db.get_all_training_entries()
+                return entries
+            finally:
+                db.close()
 
         return await asyncio.to_thread(_query)
     except Exception as e:
@@ -717,14 +721,16 @@ async def ingest_pdf(req: IngestPdfRequest):
             try:
                 db_path = os.path.join(_PROJECT_ROOT, "data", "mindforge.db")
                 db = Database(db_path)
-                db.store_pdf_source({
-                    "filename": pdf_data["metadata"]["filename"],
-                    "file_path": pdf_data["metadata"]["file_path"],
-                    "page_count": pdf_data["metadata"]["page_count"],
-                    "word_count": pdf_data["metadata"]["word_count"],
-                    "content_hash": pdf_data["metadata"]["content_hash"],
-                })
-                db.close()
+                try:
+                    db.store_pdf_source({
+                        "filename": pdf_data["metadata"]["filename"],
+                        "file_path": pdf_data["metadata"]["file_path"],
+                        "page_count": pdf_data["metadata"]["page_count"],
+                        "word_count": pdf_data["metadata"]["word_count"],
+                        "content_hash": pdf_data["metadata"]["content_hash"],
+                    })
+                finally:
+                    db.close()
             except Exception as db_err:
                 logger.warning(f"Failed to store PDF source in database: {db_err}")
 
@@ -787,51 +793,49 @@ async def ingest_web(req: IngestWebRequest):
             # Open DB connection once for all pages (was N+1: one connection per page)
             db_path = os.path.join(_PROJECT_ROOT, "data", "mindforge.db")
             db = Database(db_path)
-
-            for i, page in enumerate(pages):
-                if is_job_cancelled(job_id):
-                    db.close()
-                    return
-                content = page.get("content", "")
-                if not content:
-                    continue
-
-                san = sanitize_content(content)
-                if san["flags"]:
-                    total_flags += len(san["flags"])
-                    logger.warning(f"Page {i+1}: {len(san['flags'])} injection flag(s) detected")
-
-                clean_text = san["clean_text"]
-                if not clean_text or len(clean_text) < 50:
-                    continue
-
-                chunks = chunk_text(clean_text)
-                for chunk in chunks:
+            try:
+                for i, page in enumerate(pages):
                     if is_job_cancelled(job_id):
-                        db.close()
                         return
-                    qa_list = generate_qa_from_chunk(chunk, subject=None, adapter=None)
-                    all_qa_pairs.extend(qa_list)
+                    content = page.get("content", "")
+                    if not content:
+                        continue
 
-                # Store web source in database (reuse existing connection)
-                try:
-                    import hashlib
-                    content_hash = hashlib.sha256(clean_text.encode()).hexdigest()
-                    db.store_web_source({
-                        "url": page.get("url", req.url),
-                        "page_title": page.get("title", ""),
-                        "content_hash": content_hash,
-                        "word_count": len(clean_text.split()),
-                        "extraction_method": page.get("method_used", "beautifulsoup"),
-                        "sanitization_status": "flagged" if san["flags"] else "clean",
-                        "injection_flags": json.dumps(san["flags"]) if san["flags"] else None,
-                        "crawl_mode": "site" if req.crawl else "single",
-                        "crawl_depth": page.get("depth", 0),
-                    })
-                except Exception as db_err:
-                    logger.warning(f"Failed to store web source: {db_err}")
+                    san = sanitize_content(content)
+                    if san["flags"]:
+                        total_flags += len(san["flags"])
+                        logger.warning(f"Page {i+1}: {len(san['flags'])} injection flag(s) detected")
 
-            db.close()
+                    clean_text = san["clean_text"]
+                    if not clean_text or len(clean_text) < 50:
+                        continue
+
+                    chunks = chunk_text(clean_text)
+                    for chunk in chunks:
+                        if is_job_cancelled(job_id):
+                            return
+                        qa_list = generate_qa_from_chunk(chunk, subject=None, adapter=None)
+                        all_qa_pairs.extend(qa_list)
+
+                    # Store web source in database (reuse existing connection)
+                    try:
+                        import hashlib
+                        content_hash = hashlib.sha256(clean_text.encode()).hexdigest()
+                        db.store_web_source({
+                            "url": page.get("url", req.url),
+                            "page_title": page.get("title", ""),
+                            "content_hash": content_hash,
+                            "word_count": len(clean_text.split()),
+                            "extraction_method": page.get("method_used", "beautifulsoup"),
+                            "sanitization_status": "flagged" if san["flags"] else "clean",
+                            "injection_flags": json.dumps(san["flags"]) if san["flags"] else None,
+                            "crawl_mode": "site" if req.crawl else "single",
+                            "crawl_depth": page.get("depth", 0),
+                        })
+                    except Exception as db_err:
+                        logger.warning(f"Failed to store web source: {db_err}")
+            finally:
+                db.close()
 
             emit({"type": "progress", "job_id": job_id, "progress": 75, "stage": "qa_generated", "qa_pairs": len(all_qa_pairs)})
 

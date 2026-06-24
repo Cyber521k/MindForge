@@ -151,3 +151,32 @@ textarea:focus-visible,
   white-space: nowrap;
   border: 0;
 }
+
+/* ═══════════════════════════════════════════════
+   XBOX BLADES — 3D perspective and blade effects
+   ═══════════════════════════════════════════════ */
+
+/* 3D perspective context for blade transitions */
+.blade-container {
+  perspective: 1400px;
+  perspective-origin: center center;
+  transform-style: preserve-3d;
+}
+
+/* Each blade panel sweeps in with 3D depth */
+.blade-panel {
+  transform-style: preserve-3d;
+  backface-visibility: hidden;
+}
+
+/* Active blade tab — gold angled edge */
+.blade-tab-active {
+  background: linear-gradient(90deg, var(--surface-raised) 0%, var(--surface) 85%, transparent 100%);
+  box-shadow: inset 0 0 20px var(--accent-glow), -2px 0 8px var(--accent-glow);
+  clip-path: polygon(0 0, calc(100% - 12px) 0, 100% 50%, calc(100% - 12px) 100%, 0 100%);
+}
+
+/* Subtle gold border glow on blade content area */
+.blade-glow {
+  box-shadow: inset 2px 0 12px var(--accent-glow);
+}
