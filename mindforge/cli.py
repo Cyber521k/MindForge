@@ -178,6 +178,11 @@ def cmd_format(args):
         else:
             entries = json.load(f)
 
+    # Ensure output directory exists
+    output_dir = os.path.dirname(args.output)
+    if output_dir:
+        os.makedirs(output_dir, exist_ok=True)
+
     # Select formatter
     fmt = args.format.lower()
     if fmt == "dpo":

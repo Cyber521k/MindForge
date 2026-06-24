@@ -12,7 +12,7 @@ import uuid
 import asyncio
 import threading
 import logging
-from contextlib import asynccontextmanager
+from contextlib import asynccontextmanager, suppress
 from typing import Optional
 
 # Ensure project root is on sys.path so we can import mindforge
@@ -86,6 +86,15 @@ app.add_middleware(
 _jobs: dict = {}
 
 
+def public_job(job: dict) -> dict:
+    """Return a JSON-serializable view of a job."""
+    return {
+        key: value
+        for key, value in job.items()
+        if key not in {"cancel_event", "thread"}
+    }
+
+
 async def broadcast(message: dict):
     """Broadcast a message to all connected WebSocket clients (async)."""
     dead = []
@@ -95,7 +104,12 @@ async def broadcast(message: dict):
         except Exception:
             dead.append(ws)
     for ws in dead:
-        _ws_clients.remove(ws)
+        if ws in _ws_clients:
+            _ws_clients.remove(ws)
+        try:
+            await ws.close()
+        except Exception:
+            pass
 
 
 def emit(message: dict):
@@ -116,12 +130,33 @@ def create_job(job_type: str) -> str:
         "error": None,
         "progress": 0,
         "started_at": time.time(),
+        "cancel_event": threading.Event(),
+        "thread": None,
     }
     return job_id
 
 
-def finish_job(job_id: str, result: dict):
+def start_job_thread(job_id: str, target):
+    thread = threading.Thread(target=target, daemon=True)
     if job_id in _jobs:
+        _jobs[job_id]["thread"] = thread
+    thread.start()
+    return thread
+
+
+def is_job_cancelled(job_id: str) -> bool:
+    return job_id in _jobs and _jobs[job_id]["cancel_event"].is_set()
+
+
+def cancel_job(job_id: str):
+    if job_id in _jobs:
+        _jobs[job_id]["cancel_event"].set()
+        _jobs[job_id]["status"] = "cancelled"
+        emit({"type": "job_cancelled", "job_id": job_id})
+
+
+def finish_job(job_id: str, result: dict):
+    if job_id in _jobs and _jobs[job_id]["status"] != "cancelled":
         _jobs[job_id]["status"] = "completed"
         _jobs[job_id]["result"] = result
         _jobs[job_id]["progress"] = 100
@@ -129,7 +164,7 @@ def finish_job(job_id: str, result: dict):
 
 
 def fail_job(job_id: str, error: str):
-    if job_id in _jobs:
+    if job_id in _jobs and _jobs[job_id]["status"] != "cancelled":
         _jobs[job_id]["status"] = "failed"
         _jobs[job_id]["error"] = error
         emit({"type": "job_failed", "job_id": job_id, "error": error})
@@ -310,6 +345,8 @@ async def start_probe(req: ProbeRequest):
 
     def run_probe():
         try:
+            if is_job_cancelled(job_id):
+                return
             from mindforge.probe.engine import ProbeEngine
 
             emit({"type": "probe_started", "job_id": job_id, "model": req.model, "subject": req.subject})
@@ -325,8 +362,7 @@ async def start_probe(req: ProbeRequest):
             fail_job(job_id, str(e))
             logger.error(f"Probe job {job_id} failed: {e}")
 
-    thread = threading.Thread(target=run_probe, daemon=True)
-    thread.start()
+    start_job_thread(job_id, run_probe)
     return {"job_id": job_id, "status": "started"}
 
 
@@ -335,7 +371,7 @@ async def get_probe_status(job_id: str):
     """Get the status of a probing job."""
     if job_id not in _jobs:
         raise HTTPException(status_code=404, detail="Job not found")
-    return _jobs[job_id]
+    return public_job(_jobs[job_id])
 
 
 @app.post("/api/review/{entry_id}")
@@ -465,6 +501,8 @@ async def convert_model_api(req: ConvertRequest):
 
     def run():
         try:
+            if is_job_cancelled(job_id):
+                return
             from mindforge.convert.converter import convert_model
 
             q_bits_map = {
@@ -484,7 +522,7 @@ async def convert_model_api(req: ConvertRequest):
             fail_job(job_id, str(e))
             logger.error(f"Convert job {job_id} failed: {e}")
 
-    threading.Thread(target=run, daemon=True).start()
+    start_job_thread(job_id, run)
     return {"job_id": job_id, "status": "started"}
 
 
@@ -498,6 +536,8 @@ async def quantize_model_api(req: QuantizeRequest):
 
     def run():
         try:
+            if is_job_cancelled(job_id):
+                return
             from mindforge.convert.quantizer import quantize_model
 
             result = quantize_model(
@@ -508,7 +548,7 @@ async def quantize_model_api(req: QuantizeRequest):
             fail_job(job_id, str(e))
             logger.error(f"Quantize job {job_id} failed: {e}")
 
-    threading.Thread(target=run, daemon=True).start()
+    start_job_thread(job_id, run)
     return {"job_id": job_id, "status": "started"}
 
 
@@ -524,6 +564,8 @@ async def start_training(req: TrainRequest):
 
     def run():
         try:
+            if is_job_cancelled(job_id):
+                return
             emit({"type": "train_started", "job_id": job_id, "model": req.model, "mode": req.mode})
             from mindforge.train.trainer import train_model
 
@@ -542,7 +584,7 @@ async def start_training(req: TrainRequest):
             fail_job(job_id, str(e))
             logger.error(f"Train job {job_id} failed: {e}")
 
-    threading.Thread(target=run, daemon=True).start()
+    start_job_thread(job_id, run)
     return {"job_id": job_id, "status": "started"}
 
 
@@ -556,6 +598,8 @@ async def start_evaluation(req: EvaluateRequest):
 
     def run():
         try:
+            if is_job_cancelled(job_id):
+                return
             emit({"type": "eval_started", "job_id": job_id, "model": req.model})
             from mindforge.evaluate.evaluator import evaluate_model
 
@@ -570,7 +614,7 @@ async def start_evaluation(req: EvaluateRequest):
             fail_job(job_id, str(e))
             logger.error(f"Evaluate job {job_id} failed: {e}")
 
-    threading.Thread(target=run, daemon=True).start()
+    start_job_thread(job_id, run)
     return {"job_id": job_id, "status": "started"}
 
 
@@ -584,6 +628,8 @@ async def ingest_pdf(req: IngestPdfRequest):
 
     def run():
         try:
+            if is_job_cancelled(job_id):
+                return
             from mindforge.ingest.pdf_extractor import extract_pdf, chunk_text, generate_qa_pairs
             from mindforge.ingest.qa_generator import format_qa_as_dpo
             from mindforge.vault.database import Database
@@ -596,14 +642,20 @@ async def ingest_pdf(req: IngestPdfRequest):
 
             # Step 1: Extract text
             pdf_data = extract_pdf(req.file)
+            if is_job_cancelled(job_id):
+                return
             emit({"type": "progress", "job_id": job_id, "progress": 25, "stage": "extracted"})
 
             # Step 2: Chunk text
             chunks = chunk_text(pdf_data["text"])
+            if is_job_cancelled(job_id):
+                return
             emit({"type": "progress", "job_id": job_id, "progress": 50, "stage": "chunked", "chunks": len(chunks)})
 
             # Step 3: Generate Q&A pairs
             qa_pairs = generate_qa_pairs(chunks, subject=req.subject, adapter=None)
+            if is_job_cancelled(job_id):
+                return
             emit({"type": "progress", "job_id": job_id, "progress": 75, "stage": "qa_generated", "qa_pairs": len(qa_pairs)})
 
             # Step 4: Format as DPO and write output
@@ -639,7 +691,7 @@ async def ingest_pdf(req: IngestPdfRequest):
             fail_job(job_id, str(e))
             logger.error(f"PDF ingest job {job_id} failed: {e}")
 
-    threading.Thread(target=run, daemon=True).start()
+    start_job_thread(job_id, run)
     return {"job_id": job_id, "status": "started"}
 
 
@@ -653,6 +705,8 @@ async def ingest_web(req: IngestWebRequest):
 
     def run():
         try:
+            if is_job_cancelled(job_id):
+                return
             from mindforge.ingest.web_extractor import extract_url, crawl_site
             from mindforge.ingest.sanitizer import sanitize_content
             from mindforge.ingest.pdf_extractor import chunk_text
@@ -671,6 +725,8 @@ async def ingest_web(req: IngestWebRequest):
                     return
                 pages = [page]
 
+            if is_job_cancelled(job_id):
+                return
             if not pages:
                 fail_job(job_id, "No content extracted")
                 return
@@ -682,6 +738,8 @@ async def ingest_web(req: IngestWebRequest):
             total_flags = 0
 
             for i, page in enumerate(pages):
+                if is_job_cancelled(job_id):
+                    return
                 content = page.get("content", "")
                 if not content:
                     continue
@@ -697,6 +755,8 @@ async def ingest_web(req: IngestWebRequest):
 
                 chunks = chunk_text(clean_text)
                 for chunk in chunks:
+                    if is_job_cancelled(job_id):
+                        return
                     qa_list = generate_qa_from_chunk(chunk, subject=None, adapter=None)
                     all_qa_pairs.extend(qa_list)
 
@@ -743,7 +803,7 @@ async def ingest_web(req: IngestWebRequest):
             fail_job(job_id, str(e))
             logger.error(f"Web ingest job {job_id} failed: {e}")
 
-    threading.Thread(target=run, daemon=True).start()
+    start_job_thread(job_id, run)
     return {"job_id": job_id, "status": "started"}
 
 
@@ -790,7 +850,26 @@ async def get_stats():
 @app.get("/api/jobs")
 async def list_jobs():
     """List all jobs (probe, train, evaluate, etc.)."""
-    return _jobs
+    return {job_id: public_job(job) for job_id, job in _jobs.items()}
+
+
+@app.get("/api/jobs/{job_id}")
+async def get_job(job_id: str):
+    """Get the status of a job."""
+    if job_id not in _jobs:
+        raise HTTPException(status_code=404, detail="Job not found")
+    return public_job(_jobs[job_id])
+
+
+@app.post("/api/jobs/{job_id}/cancel")
+async def cancel_job_api(job_id: str):
+    """Cancel a running job."""
+    if job_id not in _jobs:
+        raise HTTPException(status_code=404, detail="Job not found")
+    if _jobs[job_id]["status"] != "running":
+        raise HTTPException(status_code=400, detail="Job is not running")
+    cancel_job(job_id)
+    return {"status": "cancelled", "job_id": job_id}
 
 
 # ---------------------------------------------------------------------------
@@ -803,6 +882,17 @@ async def websocket_endpoint(ws: WebSocket):
     """WebSocket endpoint — broadcasts progress updates to connected clients."""
     await ws.accept()
     _ws_clients.append(ws)
+    await ws.send_json({
+        "type": "job_statuses",
+        "jobs": {job_id: public_job(job) for job_id, job in _jobs.items()},
+    })
+
+    async def heartbeat():
+        while True:
+            await asyncio.sleep(30)
+            await ws.send_json({"type": "heartbeat", "timestamp": time.time()})
+
+    heartbeat_task = asyncio.create_task(heartbeat())
     try:
         while True:
             data = await ws.receive_text()
@@ -817,8 +907,17 @@ async def websocket_endpoint(ws: WebSocket):
                 except json.JSONDecodeError:
                     pass
     except WebSocketDisconnect:
+        pass
+    finally:
+        heartbeat_task.cancel()
+        with suppress(asyncio.CancelledError):
+            await heartbeat_task
         if ws in _ws_clients:
             _ws_clients.remove(ws)
+        try:
+            await ws.close()
+        except Exception:
+            pass
 
 
 # ---------------------------------------------------------------------------
