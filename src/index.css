@@ -167,6 +167,7 @@ textarea:focus-visible,
 .blade-panel {
   transform-style: preserve-3d;
   backface-visibility: hidden;
+  will-change: transform, opacity;
 }
 
 /* Active blade tab — gold angled edge */

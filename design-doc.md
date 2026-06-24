@@ -2061,13 +2061,34 @@ Border:         #CD7F32   (Hermes bronze — panel borders)
 - Mono: JetBrains Mono (for code, JSON, data display)
 - Logo/Caduceus: The ⚕ symbol rendered large in the header with a gold glow
 
-**Motion:**
-- Panel transitions: Xbox Blades-style 3D sweep (rotateY with perspective container, direction-aware)
-- Arrow key navigation: Left/Right or Up/Down to move between blades
-- Button hover: 100ms gold glow expansion
-- Progress bars: Smooth animated fill with pulsing gold glow
-- Phase transitions: Full panel blade sweep with 3D rotateY
-- Loading states: Pulsing gold ring around the caduceus ⚕
+**Motion (Xbox Blades System):**
+- **Blade sweep transitions**: Screens slide horizontally with `rotateY: 45deg` + `translateX: 100%` via Framer Motion custom variants. Direction-aware: forward navigation sweeps right-to-left, back sweeps left-to-right.
+- **3D perspective**: Container uses `perspective: 1400px` with `transform-style: preserve-3d` for depth perception.
+- **Blade tabs**: Sidebar items have angled right edges via CSS `clip-path: polygon(0 0, calc(100% - 12px) 0, 100% 50%, calc(100% - 12px) 100%, 0 100%)`. Active blade has gold gradient, inset glow, and a gold accent indicator bar (Framer Motion `layoutId`).
+- **Arrow key navigation**: ArrowLeft/ArrowRight switch between blades. ArrowUp/ArrowDown reserved for in-screen content. Review Dashboard is exempt (arrows navigate queue items).
+- **Accessibility**: `aria-live="polite"` on `<main>` announces blade changes. `AnimatePresence mode="wait"` ensures exiting blade is removed before new enters (no focus trapping). `prefers-reduced-motion` disables all animations.
+- **Blade sweep timing**: 300-400ms ease-in-out (Framer Motion default transition).
+- **Button hover**: 100ms gold glow expansion
+- **Progress bars**: Smooth animated fill with pulsing gold glow
+- **Loading states**: Pulsing gold ring around the caduceus ⚕
+
+**Blade CSS Classes** (in `src/index.css`):
+- `.blade-container` — 3D perspective context (`perspective: 1400px`, `preserve-3d`)
+- `.blade-panel` — blade panel with `preserve-3d` and `backface-visibility: hidden`
+- `.blade-tab-active` — active blade tab styling (gold gradient, inset glow, clip-path)
+- `.blade-glow` — subtle gold border glow on blade content area
+
+**Sound Effects (Planned):**
+- Whoosh on blade change (300-400ms transition sound)
+- Click on menu item selection
+- Tick on scroll/navigation
+- Ambient background music (toggleable in Settings)
+- Implementation: Web Audio API or Howler.js, all toggleable
+
+**Controller Hints (Planned):**
+- A = Select (bottom right corner)
+- B = Back (bottom left corner)
+- Styled to match original Xbox dashboard aesthetic
 
 **Audio (optional, toggleable):**
 - Navigation between panels: subtle click

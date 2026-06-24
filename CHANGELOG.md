@@ -6,10 +6,25 @@ All notable changes to MindForge are documented in this file.
 
 ### Added
 
-- **Xbox Blades navigation**: 3D blade sweep transitions in App.tsx (Framer Motion rotateY, perspective container)
-- **Arrow key navigation**: Left/Right or Up/Down arrows to move between screens
-- **Direction-aware transitions**: Navigation direction determines sweep direction
+- **Xbox Blades navigation system**: Complete UI redesign inspired by the original Xbox dashboard
+  - 3D blade sweep transitions (Framer Motion `rotateY: 45deg`, `translateX`, direction-aware)
+  - CSS `perspective: 1400px` container with `preserve-3d` for depth
+  - Blade tabs with angled right edges (CSS `clip-path` polygon), gold gradient, inset glow
+  - Gold accent indicator bar on active blade (Framer Motion `layoutId`)
+  - `aria-live="polite"` for screen reader announcements on blade change
+  - `AnimatePresence mode="wait"` to prevent focus trapping
+- **Arrow key navigation**: ArrowLeft/ArrowRight switch between blades, ArrowUp/ArrowDown for in-screen content
+- **Direction-aware transitions**: Navigation direction determines sweep direction (forward = right-to-left, back = left-to-right)
+- **Blade CSS classes**: `.blade-container`, `.blade-panel`, `.blade-tab-active`, `.blade-glow` in index.css
+- **Sidebar as memo**: `React.memo` with angled clip-path tabs and gold indicator
 - **Round 2 feature tests**: 63 new tests (test_round2_features.py) -- Ollama integration, async endpoints, DB indexes, ErrorBoundary
+
+### Planned (Not Yet Implemented)
+
+- **Sound effects**: Whoosh on blade change, click on select, tick on scroll, ambient music (Web Audio API / Howler.js)
+- **Controller hints**: A=Select, B=Back at bottom corners
+- **Frosted glass / translucent blade appearance** with glowing edges
+- **Hexagonal grid background pattern** with radial spotlight gradient
 
 ### Changed
 
@@ -17,6 +32,7 @@ All notable changes to MindForge are documented in this file.
 - Test files: 11 -> 12 (added test_round2_features.py)
 - Screen transitions: simple slide -> 3D blade sweep with perspective and rotateY
 - Navigation: setScreen -> navigate() with direction tracking
+- Sidebar: vertical list -> blade tabs with clip-path angled edges and gold glow
 
 ## [7.0.1] - 2026-06-24 (Round 2)
 

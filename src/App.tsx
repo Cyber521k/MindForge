@@ -92,17 +92,19 @@ export default function App() {
     return () => window.removeEventListener("keydown", handler);
   }, [screen, navigate]);
 
-  // Memoize so screen elements are stable references
+  // Memoize so screen elements are stable references.
+  // Navigation callbacks are wired so "Continue" buttons advance to the next blade.
+  // navigate is included in deps because it depends on [screen].
   const screens = useMemo<Record<Screen, JSX.Element>>(() => ({
-    "model-setup": <ModelSetup onSelectModel={setSelectedModel} />,
-    "domain-setup": <DomainSetup />,
-    "probing": <ProbingProgress />,
-    "review": <ReviewDashboard />,
-    "format": <FormatExport />,
+    "model-setup": <ModelSetup onSelectModel={setSelectedModel} onContinue={() => navigate("domain-setup")} />,
+    "domain-setup": <DomainSetup onStart={() => navigate("probing")} />,
+    "probing": <ProbingProgress onReview={() => navigate("review")} />,
+    "review": <ReviewDashboard onFormat={() => navigate("format")} />,
+    "format": <FormatExport onTrain={() => navigate("train")} />,
     "train": <TrainEvaluate />,
     "stats": <Stats />,
     "settings": <Settings />,
-  }), []);
+  }), [navigate]);
 
   return (
     <ErrorBoundary>
@@ -145,6 +147,7 @@ export default function App() {
                   transformStyle: "preserve-3d",
                   backfaceVisibility: "hidden",
                 }}
+                className="blade-panel"
               >
                 {screens[screen]}
               </motion.div>

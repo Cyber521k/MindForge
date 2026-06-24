@@ -186,7 +186,37 @@ Default port: 7878
 
 ## Desktop App (Tauri)
 
-The Tauri desktop app provides a GUI for all MindForge operations, featuring an Xbox Blades-style navigation system with 3D sweep transitions, arrow key navigation, and a game-like dashboard aesthetic:
+The Tauri desktop app provides a GUI for all MindForge operations with an Xbox Blades-style UI inspired by the original Xbox dashboard.
+
+### Xbox Blades UI
+
+The interface uses a blade navigation system where each screen is a "blade" that sweeps in and out with 3D perspective transitions:
+
+- **Blade sweep transitions** -- Screens slide horizontally with `rotateY` (45deg) and `translateX` via Framer Motion. Direction-aware: sweeping right-to-left when navigating forward, left-to-right when going back.
+- **Perspective container** -- The app uses CSS `perspective: 1400px` with `preserve-3d` for depth.
+- **Blade tabs** -- Vertical sidebar tabs with angled right edges (CSS `clip-path` polygon), gold gradient on active blade, inset glow, and a gold accent indicator bar.
+- **Arrow key navigation** -- ArrowLeft/ArrowRight switch between blades. ArrowUp/ArrowDown reserved for in-screen content navigation.
+- **Accessibility** -- `aria-live="polite"` on `<main>` announces content changes. `AnimatePresence mode="wait"` prevents focus trapping during transitions.
+- **Reduced motion** -- `prefers-reduced-motion` media query disables all animations.
+
+### Sound Effects (Planned)
+
+The sound system is designed but not yet implemented. The planned audio feedback:
+
+- **Whoosh** on blade change (300-400ms transition sound)
+- **Click** on menu item selection
+- **Tick** on scroll/navigation
+- **Ambient background music** (toggleable in Settings)
+
+Implementation will use Web Audio API or Howler.js, with all sounds toggleable via Settings.
+
+### Controller Hints (Planned)
+
+Bottom-corner controller hints matching the original Xbox dashboard:
+- **A = Select** (bottom right)
+- **B = Back** (bottom left)
+
+### Screens
 
 - **Model Setup** - Select and configure models
 - **Domain Setup** - Choose MMLU subjects and probing tier
