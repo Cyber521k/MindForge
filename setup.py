@@ -2,7 +2,7 @@ from setuptools import setup, find_packages
 
 setup(
     name="mindforge",
-    version="0.1.0",
+    version="7.0.0",
     description="AI model probing and correction system for DPO training data generation",
     packages=find_packages(),
     install_requires=[

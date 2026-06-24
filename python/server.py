@@ -114,11 +114,13 @@ async def broadcast(message: dict):
 
 def emit(message: dict):
     """Thread-safe broadcast — callable from background threads."""
+    coro = broadcast(message)
     try:
-        asyncio.run_coroutine_threadsafe(broadcast(message), get_loop())
+        asyncio.run_coroutine_threadsafe(coro, get_loop())
     except RuntimeError:
-        # Loop not ready yet — silently drop
-        pass
+        # Loop not ready yet — close the orphaned coroutine to avoid
+        # "coroutine was never awaited" RuntimeWarning.
+        coro.close()
 
 
 def create_job(job_type: str) -> str:
