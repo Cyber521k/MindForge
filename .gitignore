@@ -1,0 +1,13 @@
+data/
+*.pyc
+__pycache__/
+*.egg-info/
+*.egg
+dist/
+build/
+.env
+*.db
+node_modules/
+.pytest_cache/
+.DS_Store
+:memory:

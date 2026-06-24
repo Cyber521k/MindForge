@@ -1,0 +1,90 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  --bg: #041C1C;
+  --surface: #1B1713;
+  --surface-raised: #363029;
+  --accent: #FFD700;
+  --accent-glow: #FFD70044;
+  --accent-dim: #CD7F32;
+  --accent-secondary: #C4DA7D;
+  --text: #FFF8DC;
+  --text-secondary: #B8860B;
+  --text-dim: #544B41;
+  --success: #C4DA7D;
+  --warning: #FFBF00;
+  --error: #CD5C5C;
+  --info: #4DD0E1;
+  --border: #CD7F32;
+}
+
+* { box-sizing: border-box; margin: 0; padding: 0; }
+
+body {
+  background: var(--bg);
+  color: var(--text);
+  font-family: 'Inter', system-ui, sans-serif;
+  overflow: hidden;
+}
+
+.mono { font-family: 'JetBrains Mono', monospace; }
+
+.caduceus {
+  font-size: 2rem;
+  color: var(--accent);
+  text-shadow: 0 0 20px var(--accent-glow), 0 0 40px var(--accent-glow);
+  animation: pulse-glow 3s ease-in-out infinite;
+}
+
+@keyframes pulse-glow {
+  0%, 100% { text-shadow: 0 0 20px var(--accent-glow), 0 0 40px var(--accent-glow); }
+  50% { text-shadow: 0 0 30px var(--accent), 0 0 60px var(--accent-glow); }
+}
+
+.gold-glow { box-shadow: 0 0 15px var(--accent-glow); }
+.gold-glow:hover { box-shadow: 0 0 25px var(--accent); }
+
+.panel {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+}
+
+.panel-raised {
+  background: var(--surface-raised);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+}
+
+.btn-gold {
+  background: var(--accent);
+  color: var(--bg);
+  border: none;
+  border-radius: 6px;
+  padding: 8px 20px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 100ms ease;
+}
+
+.btn-gold:hover { box-shadow: 0 0 20px var(--accent); transform: scale(1.02); }
+.btn-gold:disabled { opacity: 0.4; cursor: not-allowed; }
+
+.progress-bar {
+  background: var(--surface-raised);
+  border-radius: 4px;
+  overflow: hidden;
+}
+
+.progress-fill {
+  background: var(--accent);
+  height: 100%;
+  transition: width 300ms ease;
+  box-shadow: 0 0 10px var(--accent-glow);
+}
+
+::-webkit-scrollbar { width: 6px; }
+::-webkit-scrollbar-track { background: var(--surface); }
+::-webkit-scrollbar-thumb { background: var(--accent-dim); border-radius: 3px; }

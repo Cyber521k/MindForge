@@ -1,0 +1,106 @@
+# MMLU Subject Taxonomy
+# Maps common subject names to MMLU subject keys
+
+categories:
+  STEM:
+    - abstract_algebra
+    - astronomy
+    - college_biology
+    - college_chemistry
+    - college_computer_science
+    - college_mathematics
+    - college_physics
+    - formal_logic
+    - high_school_biology
+    - high_school_chemistry
+    - high_school_computer_science
+    - high_school_mathematics
+    - high_school_physics
+    - machine_learning
+  Humanities:
+    - high_school_european_history
+    - high_school_us_history
+    - high_school_world_history
+    - international_law
+    - jurisprudence
+    - logical_fallacies
+    - moral_disputes
+    - moral_scenarios
+    - philosophy
+    - prehistory
+    - professional_law
+    - world_religions
+  Social Science:
+    - econometrics
+    - high_school_geography
+    - high_school_government_and_politics
+    - high_school_macroeconomics
+    - high_school_microeconomics
+    - high_school_psychology
+    - human_aging
+    - public_relations
+    - security_studies
+    - sociology
+    - us_foreign_policy
+  Professional:
+    - business_ethics
+    - clinical_knowledge
+    - college_medicine
+    - computer_security
+    - conceptual_physics
+    - electrical_engineering
+    - elementary_mathematics
+    - global_facts
+    - high_school_statistics
+    - miscellaneous
+    - professional_accounting
+    - professional_medicine
+    - virology
+  Other:
+    - anatomy
+    - college_education
+    - human_sexuality
+    - marketing
+    - medical_genetics
+    - nutrition
+    - professional_psychology
+
+# Mapping from user-friendly subject names to MMLU subject keys
+subject_mapping:
+  mathematics: high_school_mathematics
+  math: high_school_mathematics
+  algebra: abstract_algebra
+  calculus: college_mathematics
+  physics: high_school_physics
+  chemistry: high_school_chemistry
+  biology: high_school_biology
+  computer_science: high_school_computer_science
+  cs: high_school_computer_science
+  history: high_school_us_history
+  world_history: high_school_world_history
+  us_history: high_school_us_history
+  european_history: high_school_european_history
+  philosophy: philosophy
+  psychology: high_school_psychology
+  economics: high_school_microeconomics
+  macroeconomics: high_school_macroeconomics
+  microeconomics: high_school_microeconomics
+  law: professional_law
+  medicine: professional_medicine
+  ethics: business_ethics
+  logic: formal_logic
+  geography: high_school_geography
+  politics: high_school_government_and_politics
+  astronomy: astronomy
+  statistics: high_school_statistics
+  marketing: marketing
+  sociology: sociology
+  anatomy: anatomy
+  nutrition: nutrition
+  machine_learning: machine_learning
+  ml: machine_learning
+  electrical_engineering: electrical_engineering
+  accounting: professional_accounting
+  global_facts: global_facts
+  security_studies: security_studies
+  computer_security: computer_security

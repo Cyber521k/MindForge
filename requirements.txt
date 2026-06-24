@@ -1,0 +1,7 @@
+mlx-lm
+openai
+requests
+pymupdf
+beautifulsoup4
+pyyaml
+datasets
