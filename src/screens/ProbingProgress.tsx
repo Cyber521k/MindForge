@@ -130,12 +130,14 @@ export function ProbingProgress({ onReview }: { onReview?: () => void }) {
             value={model}
             onChange={(e) => setModel(e.target.value)}
             placeholder="Model"
+            aria-label="Model name"
             style={{ flex: 1, padding: 8, background: "var(--surface-raised)", border: "1px solid var(--border)", borderRadius: 4, color: "var(--text)" }}
           />
           <input
             value={subject}
             onChange={(e) => setSubject(e.target.value)}
             placeholder="Subject"
+            aria-label="Subject"
             style={{ width: 200, padding: 8, background: "var(--surface-raised)", border: "1px solid var(--border)", borderRadius: 4, color: "var(--text)" }}
           />
         </div>

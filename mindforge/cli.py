@@ -62,6 +62,21 @@ def cmd_detect(args):
     except ImportError:
         pass
 
+    # Ollama detection
+    try:
+        from mindforge.hardware.ollama_detector import detect_ollama, format_ollama_info
+        ollama = detect_ollama()
+
+        if ollama.get("running"):
+            print("")
+            print(format_ollama_info(ollama))
+        elif ollama.get("installed"):
+            print(f"\n=== Ollama ===")
+            print(f"  Status: Installed but not running")
+            print(f"  Start ollama to enable local model probing")
+    except ImportError:
+        pass
+
     # Show recommended settings
     print("\n=== Recommendations ===")
     chip = hw.get("chip", "")
@@ -100,7 +115,24 @@ def cmd_models(args):
     except Exception:
         pass
 
+    # Ollama integration
+    try:
+        from mindforge.hardware.ollama_detector import detect_ollama, format_ollama_info
+        ollama = detect_ollama()
+        if ollama.get("running"):
+            model_info["ollama"] = ollama
+    except Exception:
+        pass
+
     print(format_model_list(model_info))
+
+    # Show Ollama models if available
+    if model_info.get("ollama"):
+        ollama = model_info["ollama"]
+        print("")
+        print(format_ollama_info(ollama))
+        if ollama.get("model_count", 0) > 0:
+            print(f"\n  ✓ Ollama models available! Use with: --model ollama/<model_name>")
 
     # Show cluster-powered models if exo active
     if model_info.get("exo_cluster"):
@@ -126,7 +158,11 @@ def cmd_probe(args):
     if args.tier == "all":
         tier = "all"
     else:
-        tier = int(args.tier)
+        try:
+            tier = int(args.tier)
+        except ValueError:
+            print(f"ERROR: Invalid tier '{args.tier}'. Must be 1, 2, 3, or 'all'.")
+            return 1
 
     engine = ProbeEngine(
         model_name=args.model,
@@ -172,11 +208,24 @@ def cmd_format(args):
         print(f"  Supported formats: JSON (.json) or JSONL (.jsonl)")
         return 1
 
-    with open(args.input, "r") as f:
-        if args.input.endswith(".jsonl"):
-            entries = [json.loads(line) for line in f if line.strip()]
-        else:
-            entries = json.load(f)
+    try:
+        with open(args.input, "r") as f:
+            if args.input.endswith(".jsonl"):
+                entries = [json.loads(line) for line in f if line.strip()]
+            else:
+                entries = json.load(f)
+    except FileNotFoundError:
+        print(f"ERROR: Input file not found: {args.input}")
+        print(f"  Tip: Check the file path is correct. Use 'mindforge format --input <file>' to specify the path.")
+        print(f"  Supported formats: JSON (.json) or JSONL (.jsonl)")
+        return 1
+    except json.JSONDecodeError as e:
+        print(f"ERROR: Invalid JSON in input file: {e}")
+        print(f"  Tip: Ensure the file contains valid JSON. For JSONL, each line must be a valid JSON object.")
+        return 1
+    except Exception as e:
+        print(f"ERROR: Could not read input file: {e}")
+        return 1
 
     # Ensure output directory exists
     output_dir = os.path.dirname(args.output)

@@ -23,12 +23,12 @@ MindForge/
 │   ├── evaluate/      # Model evaluation (lm-eval-harness, mlx)
 │   ├── ingest/        # PDF/web extraction, sanitization, Q&A generation
 │   └── vault/         # SQLite database + review system
-├── python/server.py   # FastAPI sidecar server (22 routes, WebSocket streaming)
+├── python/server.py   # FastAPI sidecar server (20 routes, WebSocket streaming)
 ├── src/               # React frontend (Tauri webview)
 │   ├── screens/       # 8 screen components
 │   └── components/    # Reusable UI (ErrorState, LoadingState, etc.)
 ├── src-tauri/         # Rust Tauri backend (sidecar lifecycle management)
-├── tests/             # 9 test files (phases 1-8 + functional)
+├── tests/             # 10 test files (phases 1-8, functional, E2E)
 ├── taxonomy/           # MMLU subject taxonomy (57 subjects, 5 domains)
 └── .github/workflows/ # CI pipeline
 ```
@@ -148,14 +148,12 @@ Extracts content from web pages, sanitizes against prompt injection, generates Q
 
 ## FastAPI Server
 
-The sidecar server (`python/server.py`) exposes 22 REST API routes and a WebSocket endpoint for real-time progress streaming.
+The sidecar server (`python/server.py`) exposes 19 REST API routes and a WebSocket endpoint for real-time progress streaming.
 
 ### Running the Server
 
 ```bash
 python python/server.py
-# or
-mindforge serve
 ```
 
 Default port: 7878
@@ -182,8 +180,9 @@ Default port: 7878
 | GET  | `/api/stats` | Aggregate statistics |
 | GET  | `/api/jobs` | List all jobs |
 | GET  | `/api/jobs/{job_id}` | Get job status |
+| POST | `/api/jobs/{job_id}/cancel` | Cancel a running job |
 | GET  | `/api/jobs/{job_id}/result` | Get job result |
-| WS   | `/ws` | WebSocket (progress streaming) |
+| WS   | `/ws` | WebSocket (progress streaming, heartbeat, subscribe) |
 
 ## Desktop App (Tauri)
 
@@ -195,7 +194,7 @@ The Tauri desktop app provides a GUI for all MindForge operations:
 - **Review Dashboard** - Accept/Reject/Edit training pairs with keyboard shortcuts
 - **Format Export** - Export in 6 formats
 - **Train & Evaluate** - Launch training and evaluation jobs
-- **Stats** - Aggregate accuracy and training statistics
+- **Stats** - Aggregate accuracy and training statistics with 5 SVG/CSS charts (bar, pie, line, progress bars, summary cards)
 - **Settings** - Theme, animations, auto-approve threshold, etc.
 
 ### Sidecar Lifecycle
@@ -229,6 +228,9 @@ python -m pytest tests/test_phase1.py -v
 
 # Run functional tests (executes CLI via subprocess)
 python -m pytest tests/test_functional.py -v
+
+# Run E2E tests (full pipeline, FastAPI TestClient, WebSocket)
+python -m pytest tests/test_e2e.py -v
 ```
 
 ## CI/CD
@@ -254,10 +256,10 @@ MindForge/
 │   ├── evaluate/        # Model evaluation
 │   ├── ingest/          # PDF + web ingestion
 │   └── vault/           # SQLite database + review
-├── python/server.py     # FastAPI sidecar (22 routes)
+├── python/server.py     # FastAPI sidecar (20 routes)
 ├── src/                 # React frontend
 ├── src-tauri/           # Rust Tauri backend
-├── tests/               # 9 test files (280+ tests)
+├── tests/               # 10 test files (415+ tests)
 ├── taxonomy/            # MMLU subject taxonomy
 ├── setup.py             # Python package config
 ├── package.json         # Node package config

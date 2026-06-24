@@ -41,6 +41,16 @@ class ProbeEngine:
 
     def __init__(self, model_name, subject, tier=1, limit=25, output_dir=None,
                  judge_model=None):
+        """Initialize the probe engine with model, subject, and scoring config.
+
+        Args:
+            model_name: HuggingFace repo or model ID to probe.
+            subject: MMLU subject name (resolved via taxonomy/subjects.yaml).
+            tier: Probing depth (1=breadth, 2=depth, 3=edge cases, or 'all').
+            limit: Maximum number of questions to probe.
+            output_dir: Directory for DPO output (default: data/training-data/dpo/).
+            judge_model: Optional LLM-as-Judge model name for enhanced scoring.
+        """
         self.model_name = model_name
         self.subject_input = subject
         self.tier = tier
@@ -183,7 +193,7 @@ class ProbeEngine:
                 result["judge_verdict"] = judge_verdict
             results.append(result)
 
-            # Store in database
+            # Store in database (batch commit for efficiency)
             self.db.store_response(result)
 
             # Tier 2: Depth probing (follow-ups based on model's answer)
@@ -245,6 +255,9 @@ class ProbeEngine:
                             logger.warning(f"Tier 3 edge case failed: {e}")
                     # Clear so we don't re-run for every question
                     del self._tier3_questions
+
+        # Commit all responses at once
+        self.db.conn.commit()
 
         # Step 3: Generate DPO training pairs from incorrect answers
         print(f"\n{'='*60}")

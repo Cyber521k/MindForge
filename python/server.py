@@ -124,6 +124,7 @@ def emit(message: dict):
 
 
 def create_job(job_type: str) -> str:
+    """Create a new job entry and return its 8-char ID."""
     job_id = str(uuid.uuid4())[:8]
     _jobs[job_id] = {
         "status": "running",
@@ -139,6 +140,7 @@ def create_job(job_type: str) -> str:
 
 
 def start_job_thread(job_id: str, target):
+    """Start a daemon thread for a job and store the thread reference."""
     thread = threading.Thread(target=target, daemon=True)
     if job_id in _jobs:
         _jobs[job_id]["thread"] = thread
@@ -147,10 +149,12 @@ def start_job_thread(job_id: str, target):
 
 
 def is_job_cancelled(job_id: str) -> bool:
+    """Check whether a job has been cancelled via cancel_job()."""
     return job_id in _jobs and _jobs[job_id]["cancel_event"].is_set()
 
 
 def cancel_job(job_id: str):
+    """Set a job's cancel event and emit a job_cancelled WebSocket message."""
     if job_id in _jobs:
         _jobs[job_id]["cancel_event"].set()
         _jobs[job_id]["status"] = "cancelled"
@@ -158,6 +162,7 @@ def cancel_job(job_id: str):
 
 
 def finish_job(job_id: str, result: dict):
+    """Mark a job as completed, store its result, and emit job_complete."""
     if job_id in _jobs and _jobs[job_id]["status"] != "cancelled":
         _jobs[job_id]["status"] = "completed"
         _jobs[job_id]["result"] = result
@@ -166,6 +171,7 @@ def finish_job(job_id: str, result: dict):
 
 
 def fail_job(job_id: str, error: str):
+    """Mark a job as failed, store the error, and emit job_failed."""
     if job_id in _jobs and _jobs[job_id]["status"] != "cancelled":
         _jobs[job_id]["status"] = "failed"
         _jobs[job_id]["error"] = error
@@ -292,12 +298,17 @@ async def get_models():
 @app.get("/api/taxonomy")
 async def get_taxonomy():
     """Subject catalog — reads taxonomy/subjects.yaml."""
-    import yaml
-
     tax_path = os.path.join(_PROJECT_ROOT, "taxonomy", "subjects.yaml")
-    try:
+
+    def _load():
+        """Load the taxonomy YAML from disk (runs in thread pool)."""
+        import yaml
+
         with open(tax_path, "r") as f:
             return yaml.safe_load(f)
+
+    try:
+        return await asyncio.to_thread(_load)
     except FileNotFoundError:
         raise HTTPException(status_code=404, detail=f"Taxonomy file not found: {tax_path}")
     except Exception as e:
@@ -309,14 +320,18 @@ async def get_taxonomy():
 async def get_responses():
     """Get probe results from the SQLite database."""
     try:
-        from mindforge.vault.database import Database
+        def _query():
+            """Query recent responses from the SQLite database (runs in thread pool)."""
+            from mindforge.vault.database import Database
 
-        db = Database(os.path.join(_PROJECT_ROOT, "data", "mindforge.db"))
-        cursor = db.conn.cursor()
-        cursor.execute("SELECT * FROM responses ORDER BY created_at DESC LIMIT 100")
-        rows = [dict(r) for r in cursor.fetchall()]
-        db.close()
-        return rows
+            db = Database(os.path.join(_PROJECT_ROOT, "data", "mindforge.db"))
+            cursor = db.conn.cursor()
+            cursor.execute("SELECT * FROM responses ORDER BY created_at DESC LIMIT 100")
+            rows = [dict(r) for r in cursor.fetchall()]
+            db.close()
+            return rows
+
+        return await asyncio.to_thread(_query)
     except Exception as e:
         logger.error(f"Failed to get responses: {e}")
         raise HTTPException(status_code=500, detail=f"Failed to get responses: {e}")
@@ -326,12 +341,16 @@ async def get_responses():
 async def get_training_entries():
     """Get all training entries from the database."""
     try:
-        from mindforge.vault.database import Database
+        def _query():
+            """Query all training entries from the SQLite database (runs in thread pool)."""
+            from mindforge.vault.database import Database
 
-        db = Database(os.path.join(_PROJECT_ROOT, "data", "mindforge.db"))
-        entries = db.get_all_training_entries()
-        db.close()
-        return entries
+            db = Database(os.path.join(_PROJECT_ROOT, "data", "mindforge.db"))
+            entries = db.get_all_training_entries()
+            db.close()
+            return entries
+
+        return await asyncio.to_thread(_query)
     except Exception as e:
         logger.error(f"Failed to get training entries: {e}")
         raise HTTPException(status_code=500, detail=f"Failed to get training entries: {e}")
@@ -346,6 +365,7 @@ async def start_probe(req: ProbeRequest):
     job_id = create_job("probe")
 
     def run_probe():
+        """Thread target: run the probe engine and emit progress via WebSocket."""
         try:
             if is_job_cancelled(job_id):
                 return
@@ -386,32 +406,36 @@ async def submit_review(entry_id: int, req: ReviewRequest):
             detail=f"Invalid action '{req.action}'. Must be one of: {', '.join(sorted(valid_actions))}",
         )
 
-    try:
+    def _review():
+        """Submit the review action to the database (runs in thread pool)."""
         from mindforge.vault.database import Database
 
         db = Database(os.path.join(_PROJECT_ROOT, "data", "mindforge.db"))
+        try:
+            cursor = db.conn.cursor()
+            cursor.execute("SELECT id FROM training_entries WHERE id = ?", (entry_id,))
+            if cursor.fetchone() is None:
+                raise HTTPException(status_code=404, detail=f"Training entry {entry_id} not found")
 
-        # Check entry exists
-        cursor = db.conn.cursor()
-        cursor.execute("SELECT id FROM training_entries WHERE id = ?", (entry_id,))
-        if cursor.fetchone() is None:
+            if req.action == "accept":
+                db.update_entry_status(entry_id, "accepted")
+            elif req.action == "reject":
+                db.update_entry_status(entry_id, "rejected")
+            elif req.action == "edit":
+                db.update_training_entry(entry_id, chosen=req.edited_chosen, rejected=req.edited_rejected)
+                db.update_entry_status(entry_id, "edited")
+            elif req.action == "skip":
+                pass  # Leave as pending
+
+            db.store_review_session(entry_id, req.action, req.edited_chosen, req.edited_rejected)
+            return {"status": "ok", "action": req.action}
+        finally:
             db.close()
-            raise HTTPException(status_code=404, detail=f"Training entry {entry_id} not found")
 
-        if req.action == "accept":
-            db.update_entry_status(entry_id, "accepted")
-        elif req.action == "reject":
-            db.update_entry_status(entry_id, "rejected")
-        elif req.action == "edit":
-            db.update_training_entry(entry_id, chosen=req.edited_chosen, rejected=req.edited_rejected)
-            db.update_entry_status(entry_id, "edited")
-        elif req.action == "skip":
-            pass  # Leave as pending
-
-        db.store_review_session(entry_id, req.action, req.edited_chosen, req.edited_rejected)
-        db.close()
+    try:
+        result = await asyncio.to_thread(_review)
         emit({"type": "review_action", "entry_id": entry_id, "action": req.action})
-        return {"status": "ok", "action": req.action}
+        return result
     except HTTPException:
         raise
     except Exception as e:
@@ -424,18 +448,19 @@ async def format_data(req: FormatRequest):
     """Format training data into the requested format (DPO default)."""
     import json as _json
 
-    try:
-        with open(req.input, "r") as f:
-            if req.input.endswith(".jsonl"):
-                entries = [_json.loads(line) for line in f if line.strip()]
-            else:
-                entries = _json.load(f)
-    except FileNotFoundError:
-        raise HTTPException(status_code=404, detail=f"Input file not found: {req.input}")
-    except json.JSONDecodeError as e:
-        raise HTTPException(status_code=400, detail=f"Invalid JSON in input file: {e}")
+    def _format():
+        """Load and format training data from file (runs in thread pool)."""
+        try:
+            with open(req.input, "r") as f:
+                if req.input.endswith(".jsonl"):
+                    entries = [_json.loads(line) for line in f if line.strip()]
+                else:
+                    entries = _json.load(f)
+        except FileNotFoundError:
+            raise HTTPException(status_code=404, detail=f"Input file not found: {req.input}")
+        except json.JSONDecodeError as e:
+            raise HTTPException(status_code=400, detail=f"Invalid JSON in input file: {e}")
 
-    try:
         fmt = req.format
         if fmt == "dpo":
             from mindforge.format.dpo import format_dpo_batch, write_dpo_jsonl
@@ -486,6 +511,9 @@ async def format_data(req: FormatRequest):
             raise HTTPException(status_code=400, detail=f"Unknown format: {fmt}")
 
         return {"status": "ok", "count": len(formatted), "output": out}
+
+    try:
+        return await asyncio.to_thread(_format)
     except HTTPException:
         raise
     except Exception as e:
@@ -502,6 +530,7 @@ async def convert_model_api(req: ConvertRequest):
     job_id = create_job("convert")
 
     def run():
+        """Thread target: execute the job and emit progress/fail/complete via WebSocket."""
         try:
             if is_job_cancelled(job_id):
                 return
@@ -537,6 +566,7 @@ async def quantize_model_api(req: QuantizeRequest):
     job_id = create_job("quantize")
 
     def run():
+        """Thread target: execute the job and emit progress/fail/complete via WebSocket."""
         try:
             if is_job_cancelled(job_id):
                 return
@@ -565,6 +595,7 @@ async def start_training(req: TrainRequest):
     job_id = create_job("train")
 
     def run():
+        """Thread target: execute the job and emit progress/fail/complete via WebSocket."""
         try:
             if is_job_cancelled(job_id):
                 return
@@ -599,6 +630,7 @@ async def start_evaluation(req: EvaluateRequest):
     job_id = create_job("evaluate")
 
     def run():
+        """Thread target: execute the job and emit progress/fail/complete via WebSocket."""
         try:
             if is_job_cancelled(job_id):
                 return
@@ -629,6 +661,7 @@ async def ingest_pdf(req: IngestPdfRequest):
     job_id = create_job("ingest-pdf")
 
     def run():
+        """Thread target: execute the job and emit progress/fail/complete via WebSocket."""
         try:
             if is_job_cancelled(job_id):
                 return
@@ -706,6 +739,7 @@ async def ingest_web(req: IngestWebRequest):
     job_id = create_job("ingest-web")
 
     def run():
+        """Thread target: execute the job and emit progress/fail/complete via WebSocket."""
         try:
             if is_job_cancelled(job_id):
                 return
@@ -739,8 +773,13 @@ async def ingest_web(req: IngestWebRequest):
             all_qa_pairs = []
             total_flags = 0
 
+            # Open DB connection once for all pages (was N+1: one connection per page)
+            db_path = os.path.join(_PROJECT_ROOT, "data", "mindforge.db")
+            db = Database(db_path)
+
             for i, page in enumerate(pages):
                 if is_job_cancelled(job_id):
+                    db.close()
                     return
                 content = page.get("content", "")
                 if not content:
@@ -758,14 +797,13 @@ async def ingest_web(req: IngestWebRequest):
                 chunks = chunk_text(clean_text)
                 for chunk in chunks:
                     if is_job_cancelled(job_id):
+                        db.close()
                         return
                     qa_list = generate_qa_from_chunk(chunk, subject=None, adapter=None)
                     all_qa_pairs.extend(qa_list)
 
-                # Store web source in database
+                # Store web source in database (reuse existing connection)
                 try:
-                    db_path = os.path.join(_PROJECT_ROOT, "data", "mindforge.db")
-                    db = Database(db_path)
                     import hashlib
                     content_hash = hashlib.sha256(clean_text.encode()).hexdigest()
                     db.store_web_source({
@@ -779,9 +817,10 @@ async def ingest_web(req: IngestWebRequest):
                         "crawl_mode": "site" if req.crawl else "single",
                         "crawl_depth": page.get("depth", 0),
                     })
-                    db.close()
                 except Exception as db_err:
                     logger.warning(f"Failed to store web source: {db_err}")
+
+            db.close()
 
             emit({"type": "progress", "job_id": job_id, "progress": 75, "stage": "qa_generated", "qa_pairs": len(all_qa_pairs)})
 
@@ -812,38 +851,44 @@ async def ingest_web(req: IngestWebRequest):
 @app.get("/api/stats")
 async def get_stats():
     """Get aggregate statistics from the database."""
-    try:
+    def _stats():
+        """Compute aggregate statistics from the SQLite database (runs in thread pool)."""
         from mindforge.vault.database import Database
 
         db = Database(os.path.join(_PROJECT_ROOT, "data", "mindforge.db"))
-        cursor = db.conn.cursor()
+        try:
+            cursor = db.conn.cursor()
 
-        cursor.execute("SELECT COUNT(*) FROM responses")
-        total_q = cursor.fetchone()[0]
+            cursor.execute("SELECT COUNT(*) FROM responses")
+            total_q = cursor.fetchone()[0]
 
-        cursor.execute("SELECT COUNT(*) FROM training_entries")
-        training_pairs = cursor.fetchone()[0]
+            cursor.execute("SELECT COUNT(*) FROM training_entries")
+            training_pairs = cursor.fetchone()[0]
 
-        cursor.execute("SELECT COUNT(DISTINCT subject) FROM responses")
-        subjects = cursor.fetchone()[0]
+            cursor.execute("SELECT COUNT(DISTINCT subject) FROM responses")
+            subjects = cursor.fetchone()[0]
 
-        cursor.execute("SELECT subject, AVG(is_correct) * 100 as accuracy FROM responses GROUP BY subject")
-        accuracy = {}
-        for row in cursor.fetchall():
-            domain = row[0].split("_")[0] if row[0] else "unknown"
-            if domain not in accuracy:
-                accuracy[domain] = []
-            accuracy[domain].append(row[1])
-        accuracy = {k: sum(v) / len(v) for k, v in accuracy.items()}
+            cursor.execute("SELECT subject, AVG(is_correct) * 100 as accuracy FROM responses GROUP BY subject")
+            accuracy = {}
+            for row in cursor.fetchall():
+                domain = row[0].split("_")[0] if row[0] else "unknown"
+                if domain not in accuracy:
+                    accuracy[domain] = []
+                accuracy[domain].append(row[1])
+            accuracy = {k: sum(v) / len(v) for k, v in accuracy.items()}
 
-        db.close()
-        return {
-            "total_questions": total_q,
-            "training_pairs": training_pairs,
-            "subjects": subjects,
-            "training_runs": 0,
-            "accuracy": accuracy,
-        }
+            return {
+                "total_questions": total_q,
+                "training_pairs": training_pairs,
+                "subjects": subjects,
+                "training_runs": 0,
+                "accuracy": accuracy,
+            }
+        finally:
+            db.close()
+
+    try:
+        return await asyncio.to_thread(_stats)
     except Exception as e:
         logger.error(f"Failed to get stats: {e}")
         raise HTTPException(status_code=500, detail=f"Failed to get stats: {e}")
@@ -890,6 +935,7 @@ async def websocket_endpoint(ws: WebSocket):
     })
 
     async def heartbeat():
+        """Send periodic WebSocket heartbeats every 30 seconds to keep the connection alive."""
         while True:
             await asyncio.sleep(30)
             await ws.send_json({"type": "heartbeat", "timestamp": time.time()})

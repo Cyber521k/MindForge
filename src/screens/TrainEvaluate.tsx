@@ -110,12 +110,13 @@ export function TrainEvaluate() {
 
       {/* Base Model Selection */}
       <div className="panel" style={{ padding: 20, marginBottom: 20 }}>
-        <h3 style={{ marginBottom: 12, fontSize: 14, color: "var(--accent-secondary)", textTransform: "uppercase", letterSpacing: 1 }}>Base Model</h3>
+        <h2 style={{ marginBottom: 12, fontSize: 14, color: "var(--accent-secondary)", textTransform: "uppercase", letterSpacing: 1 }}>Base Model</h2>
         <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
           <span style={{ color: "var(--accent)" }}>●</span>
           <input
             value={model}
             onChange={(e) => setModel(e.target.value)}
+            aria-label="Base model"
             style={{ flex: 1, padding: 8, background: "var(--surface-raised)", border: "1px solid var(--border)", borderRadius: 4, color: "var(--text)" }}
           />
         </div>
@@ -123,7 +124,7 @@ export function TrainEvaluate() {
 
       {/* Training Config */}
       <div className="panel" style={{ padding: 20, marginBottom: 20 }}>
-        <h3 style={{ marginBottom: 12, fontSize: 14, color: "var(--accent-secondary)", textTransform: "uppercase", letterSpacing: 1 }}>Training Config</h3>
+        <h2 style={{ marginBottom: 12, fontSize: 14, color: "var(--accent-secondary)", textTransform: "uppercase", letterSpacing: 1 }}>Training Config</h2>
         <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12, marginBottom: 12 }}>
           <div>
             <label style={{ fontSize: 12, color: "var(--text-secondary)", display: "block", marginBottom: 4 }}>Method</label>
@@ -172,7 +173,7 @@ export function TrainEvaluate() {
       {/* Training Progress */}
       {(running || currentIter > 0) && (
         <div className="panel" style={{ padding: 20, marginBottom: 20 }}>
-          <h3 style={{ marginBottom: 12, fontSize: 14, color: "var(--accent-secondary)", textTransform: "uppercase", letterSpacing: 1 }}>Training Progress</h3>
+          <h2 style={{ marginBottom: 12, fontSize: 14, color: "var(--accent-secondary)", textTransform: "uppercase", letterSpacing: 1 }}>Training Progress</h2>
           <div style={{ fontSize: 14, marginBottom: 8 }}>
             Iteration <span style={{ color: "var(--accent)" }}>{currentIter}</span> / {iters}
           </div>
@@ -214,7 +215,7 @@ export function TrainEvaluate() {
 
       {/* Evaluation */}
       <div className="panel" style={{ padding: 20 }}>
-        <h3 style={{ marginBottom: 12, fontSize: 14, color: "var(--accent-secondary)", textTransform: "uppercase", letterSpacing: 1 }}>Evaluation</h3>
+        <h2 style={{ marginBottom: 12, fontSize: 14, color: "var(--accent-secondary)", textTransform: "uppercase", letterSpacing: 1 }}>Evaluation</h2>
         <button className="btn-gold" onClick={startEval} disabled={evaluating} style={{ padding: "8px 20px", marginBottom: 12, fontSize: 14, opacity: evaluating ? 0.5 : 1 }}>
           {evaluating ? "⏳ Evaluating..." : "► Run Evaluation"}
         </button>

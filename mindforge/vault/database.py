@@ -13,6 +13,12 @@ class Database:
     """SQLite database for storing responses, training entries, and review sessions."""
 
     def __init__(self, db_path=None):
+        """Open (or create) the SQLite database and initialize the schema.
+
+        Args:
+            db_path: Path to the SQLite file. Defaults to data/mindforge.db
+                     relative to the project root.
+        """
         if db_path is None:
             db_path = os.path.join(os.path.dirname(__file__), "..", "..", "data", "mindforge.db")
         self.db_path = os.path.abspath(db_path)
@@ -21,7 +27,10 @@ class Database:
 
         self.conn = sqlite3.connect(self.db_path)
         self.conn.row_factory = sqlite3.Row
+        self.conn.execute("PRAGMA journal_mode = WAL")
+        self.conn.execute("PRAGMA synchronous = NORMAL")
         self._init_schema()
+        self._ensure_indexes()
 
     def _init_schema(self):
         """Create tables if they don't exist."""
@@ -195,6 +204,32 @@ class Database:
             VALUES (1, 0, 0, 'not_detected', 0)
         """)
 
+        self.conn.commit()
+
+    def _ensure_indexes(self):
+        """Create indexes if they don't exist — improves ORDER BY and WHERE filtering."""
+        cursor = self.conn.cursor()
+        # responses: ordered by created_at DESC, filtered by subject/model
+        cursor.execute(
+            "CREATE INDEX IF NOT EXISTS idx_responses_created_at ON responses(created_at DESC)"
+        )
+        cursor.execute(
+            "CREATE INDEX IF NOT EXISTS idx_responses_subject ON responses(subject)"
+        )
+        cursor.execute(
+            "CREATE INDEX IF NOT EXISTS idx_responses_model ON responses(model)"
+        )
+        # training_entries: ordered by created_at, filtered by status
+        cursor.execute(
+            "CREATE INDEX IF NOT EXISTS idx_training_entries_created_at ON training_entries(created_at)"
+        )
+        cursor.execute(
+            "CREATE INDEX IF NOT EXISTS idx_training_entries_status ON training_entries(status)"
+        )
+        # review_sessions: filtered by training_entry_id
+        cursor.execute(
+            "CREATE INDEX IF NOT EXISTS idx_review_sessions_entry_id ON review_sessions(training_entry_id)"
+        )
         self.conn.commit()
 
     def store_response(self, result):

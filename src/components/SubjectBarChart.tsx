@@ -1,3 +1,4 @@
+import { useRef, useState, useEffect } from "react";
 import { motion } from "framer-motion";
 
 interface BarDatum {
@@ -8,9 +9,25 @@ interface BarDatum {
 
 /**
  * Stacked horizontal bar chart: correct (green) vs incorrect (red) per subject.
- * Pure SVG, no external deps.
+ * Pure SVG with measured container width, no external deps.
  */
 export function SubjectBarChart({ data, height = 260 }: { data: BarDatum[]; height?: number }) {
+  const containerRef = useRef<HTMLDivElement>(null);
+  const [width, setWidth] = useState(600);
+
+  useEffect(() => {
+    if (!containerRef.current) return;
+    const update = () => {
+      if (containerRef.current) {
+        setWidth(containerRef.current.clientWidth);
+      }
+    };
+    update();
+    const observer = new ResizeObserver(update);
+    observer.observe(containerRef.current);
+    return () => observer.disconnect();
+  }, []);
+
   if (data.length === 0) {
     return (
       <div style={{ padding: 20, color: "var(--text-dim)", fontSize: 13, textAlign: "center" }}>
@@ -19,19 +36,20 @@ export function SubjectBarChart({ data, height = 260 }: { data: BarDatum[]; heig
     );
   }
 
-  const maxTotal = Math.max(...data.map((d) => d.correct + d.incorrect), 1);
+  const labelW = 110;
+  const chartW = Math.max(width - labelW - 40, 200); // pixel width for bars
   const barH = 22;
   const gap = 8;
-  const labelW = 110;
-  const chartW = 100; // percentage-based width units
   const totalH = data.length * (barH + gap) + 30;
+  const svgH = Math.max(height, totalH);
+  const maxTotal = Math.max(...data.map((d) => d.correct + d.incorrect), 1);
 
   return (
-    <div style={{ overflowX: "auto" }}>
-      <svg width="100%" height={Math.max(height, totalH)} style={{ minWidth: 400 }}>
+    <div ref={containerRef} style={{ overflowX: "auto" }}>
+      <svg width="100%" height={svgH} style={{ minWidth: 400 }}>
         {data.map((d, i) => {
-          const correctPct = (d.correct / maxTotal) * chartW;
-          const incorrectPct = (d.incorrect / maxTotal) * chartW;
+          const correctW = (d.correct / maxTotal) * chartW;
+          const incorrectW = (d.incorrect / maxTotal) * chartW;
           const y = i * (barH + gap) + 4;
           return (
             <g key={d.label}>
@@ -50,7 +68,7 @@ export function SubjectBarChart({ data, height = 260 }: { data: BarDatum[]; heig
               <rect
                 x={labelW}
                 y={y}
-                width={`${chartW}%`}
+                width={chartW}
                 height={barH}
                 fill="var(--surface-raised)"
                 rx={3}
@@ -63,23 +81,23 @@ export function SubjectBarChart({ data, height = 260 }: { data: BarDatum[]; heig
                 rx={3}
                 fill="var(--success)"
                 initial={{ width: 0 }}
-                animate={{ width: `${correctPct}%` }}
+                animate={{ width: correctW }}
                 transition={{ duration: 0.5, delay: i * 0.03 }}
               />
               {/* Incorrect bar (stacked) */}
               <motion.rect
-                x={labelW + correctPct}
+                x={labelW + correctW}
                 y={y}
                 height={barH}
                 rx={3}
                 fill="var(--error)"
                 initial={{ width: 0 }}
-                animate={{ width: `${incorrectPct}%` }}
+                animate={{ width: incorrectW }}
                 transition={{ duration: 0.5, delay: i * 0.03 + 0.15 }}
               />
               {/* Count labels */}
               <text
-                x={labelW + correctPct + incorrectPct + 4}
+                x={labelW + correctW + incorrectW + 4}
                 y={y + barH / 2 + 4}
                 fill="var(--text-dim)"
                 fontSize={10}

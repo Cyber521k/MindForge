@@ -94,6 +94,7 @@ def _run_sft_training(
         """Callback to track training progress and loss."""
 
         def __call__(self, info):
+            """Called by mlx_lm.lora.train on each iteration with loss/step info."""
             progress["iter"] = info.get("iteration", progress["iter"])
             progress["loss"] = info.get("loss", progress["loss"])
             if progress["loss"] is not None:

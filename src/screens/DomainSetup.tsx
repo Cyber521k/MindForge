@@ -93,7 +93,17 @@ export function DomainSetup({ onStart }: { onStart?: (subjects: string[], tier: 
         return (
           <div key={domain} className="panel" style={{ marginBottom: 12, overflow: "hidden" }}>
             <div
+              role="button"
+              tabIndex={0}
+              aria-label={`${domain} (${domainSubjects.length} subjects${selectedInDomain > 0 ? `, ${selectedInDomain} selected` : ""})`}
+              aria-expanded={isExpanded}
               onClick={() => toggleExpand(domain)}
+              onKeyDown={(e) => {
+                if (e.key === "Enter" || e.key === " ") {
+                  e.preventDefault();
+                  toggleExpand(domain);
+                }
+              }}
               style={{
                 padding: "12px 16px",
                 cursor: "pointer",
@@ -119,8 +129,18 @@ export function DomainSetup({ onStart }: { onStart?: (subjects: string[], tier: 
                 {domainSubjects.map((s) => (
                   <motion.div
                     key={s}
+                    role="button"
+                    tabIndex={0}
+                    aria-label={`${s.replace(/_/g, " ")}${selected.has(s) ? " (selected)" : ""}`}
+                    aria-pressed={selected.has(s)}
                     whileHover={{ x: 4 }}
                     onClick={() => toggle(s)}
+                    onKeyDown={(e) => {
+                      if (e.key === "Enter" || e.key === " ") {
+                        e.preventDefault();
+                        toggle(s);
+                      }
+                    }}
                     style={{
                       padding: "6px 10px",
                       cursor: "pointer",
@@ -147,9 +167,9 @@ export function DomainSetup({ onStart }: { onStart?: (subjects: string[], tier: 
 
       {/* Probing Depth */}
       <div className="panel" style={{ padding: 16, marginBottom: 16 }}>
-        <h3 style={{ marginBottom: 10, fontSize: 14, color: "var(--accent-secondary)", textTransform: "uppercase", letterSpacing: 1 }}>
+        <h2 style={{ marginBottom: 10, fontSize: 14, color: "var(--accent-secondary)", textTransform: "uppercase", letterSpacing: 1 }}>
           Probing Depth
-        </h3>
+        </h2>
         {[
           { t: "1", label: "Tier 1 — Breadth (one question per sub-topic)" },
           { t: "2", label: "Tier 2 — Depth (follow-up drilling)" },
@@ -157,7 +177,17 @@ export function DomainSetup({ onStart }: { onStart?: (subjects: string[], tier: 
         ].map(({ t, label }) => (
           <div
             key={t}
+            role="button"
+            tabIndex={0}
+            aria-label={label}
+            aria-pressed={tier === t}
             onClick={() => setTier(t)}
+            onKeyDown={(e) => {
+              if (e.key === "Enter" || e.key === " ") {
+                e.preventDefault();
+                setTier(t);
+              }
+            }}
             style={{
               padding: "6px 10px",
               cursor: "pointer",

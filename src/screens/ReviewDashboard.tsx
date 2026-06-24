@@ -212,7 +212,7 @@ export function ReviewDashboard({ onFormat }: { onFormat?: () => void }) {
             <div style={{ display: "flex", gap: 12, marginBottom: 16, fontSize: 12, color: "var(--text-secondary)" }}>
               <span>[{entry.subject}]</span>
               <span>Format: {entry.format}</span>
-              <ConfidenceBadge confidence={0.55} />
+              <ConfidenceBadge confidence={entry.confidence ?? 0.55} />
             </div>
 
             {/* Prompt */}

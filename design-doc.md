@@ -12,7 +12,7 @@ A pipeline that:
 5. (Optionally) fine-tunes a target model on that data
 6. Ingests PDFs/books into the same training format
 
-The human reviews everything in the built-in TUI dashboard before it becomes training data.
+The human reviews everything in the built-in dashboard (Tauri GUI or CLI) before it becomes training data.
 
 ---
 
@@ -39,7 +39,7 @@ The human reviews everything in the built-in TUI dashboard before it becomes tra
 │              │Review    │             │                         │
 │              │Queue     │─────────────┘                         │
 │              │(conf<0.7)│                                       │
-│              │TUI Dash  │                                       │
+│              │TUI/CLI   │                                       │
 │              └────┬─────┘                                       │
 │                   │ human sign-off                               │
 │                   ▼                                              │
@@ -436,7 +436,7 @@ Response comes in
        │ Still uncertain?
        ▼
 ┌──────────────┐
-│ Layer 4:     │  Flag for human review in TUI dashboard
+│ Layer 4:     │  Flag for human review in dashboard
 │ Human Flag   │  (never auto-approve if all layers are uncertain)
 └──────────────┘
 ```
@@ -458,9 +458,11 @@ Every response gets a confidence score (0.0 - 1.0):
 
 ### In-Program Review System
 
-The human review gate is built into MindForge itself -- no external tools needed. A TUI (terminal UI) dashboard where the reviewer signs off on every response before it enters the training vault.
+The human review gate is built into MindForge itself -- no external tools needed. A dashboard (Tauri GUI or CLI `mindforge review`) where the reviewer signs off on every response before it enters the training vault.
 
-### Review Dashboard (TUI)
+### Review Dashboard (CLI / Tauri GUI)
+
+> The review dashboard is implemented both as a CLI (`mindforge review`) and as a Tauri GUI screen (`ReviewDashboard.tsx`). The design below applies to both.
 
 ```
 ╔══════════════════════════════════════════════════════════════╗
@@ -554,7 +556,7 @@ Every response gets a confidence score (0.0 - 1.0):
 Instead of external vaults, MindForge uses a local SQLite database plus a structured file directory:
 
 ```
-mindforge-data/
+data/
 ├── mindforge.db              # SQLite: stores all responses, scores, metadata
 ├── correct/                  # Verified correct responses (JSON)
 │   ├── stem/
@@ -673,7 +675,7 @@ Incorrect response
        │
        ▼
 ┌──────────────┐
-│ Human Review │  Corrected answer goes to TUI
+│ Human Review │  Corrected answer goes to
 │ (Dashboard)  │  dashboard for sign-off before
 │              │  entering training data
 └──────────────┘
@@ -983,7 +985,7 @@ PDF/Book
        │
        ▼
 ┌──────────────┐
-│ Human Review │  Review generated Q&A in the TUI dashboard
+│ Human Review │  Review generated Q&A in the dashboard
 │ (Dashboard)  │  (verify the Q&A is faithful to the source)
 └──────┬───────┘
        │
@@ -1115,14 +1117,14 @@ A "Convert Model" panel accessible from the Model Setup screen:
 - Hardware check shows whether the converted model will fit in memory after conversion
 - Conversion log streams in real-time via WebSocket (download progress, conversion steps)
 - After conversion completes, the new model appears in the local MLX models list on the Model Setup screen automatically
-- Converted models are stored in `~/mindforge-data/models/` and registered in SQLite
+- Converted models are stored in `data/models/` and registered in SQLite
 
 ### Integration with Model List
 
 When MindForge builds the available models list, it combines three sources:
 
 1. **Pre-converted MLX models** from the mlx-community HuggingFace org (curated, tested)
-2. **User-converted models** stored locally in `~/mindforge-data/models/` (from previous conversions)
+2. **User-converted models** stored locally in `data/models/` (from previous conversions)
 3. **Cloud models** from detected API keys (OpenAI, OpenRouter, etc.)
 
 Converted models show a " Converted" badge in the model list to distinguish them from official mlx-community releases.

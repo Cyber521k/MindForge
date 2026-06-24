@@ -11,6 +11,13 @@ const PHASE_LABELS: Record<Screen, string> = {
   settings: "Settings",
 };
 
+/**
+ * Bottom status bar showing model, phase, progress, and WebSocket connection state.
+ * @param model - Optional selected model name.
+ * @param phase - Optional current screen/phase ID.
+ * @param progress - Optional progress text to display.
+ * @param connected - WebSocket connection status (green dot if true).
+ */
 export function StatusBar({
   model,
   phase,
@@ -37,7 +44,7 @@ export function StatusBar({
         flexShrink: 0,
       }}
     >
-      <span style={{ color: "var(--accent)", fontSize: 14 }}>⚕</span>
+      <span style={{ color: "var(--accent)", fontSize: 14 }} aria-hidden="true">⚕</span>
       {model && <span>[Model: {model}]</span>}
       {phase && <span>[Phase: {typeof phase === "string" ? PHASE_LABELS[phase as Screen] || phase : phase}]</span>}
       {progress && <span>[{progress}]</span>}

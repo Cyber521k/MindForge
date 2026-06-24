@@ -90,15 +90,25 @@ export function FormatExport({ onTrain }: { onTrain?: () => void }) {
 
       {/* Format Selection */}
       <div className="panel" style={{ padding: 20, marginBottom: 20 }}>
-        <h3 style={{ marginBottom: 12, fontSize: 14, color: "var(--accent-secondary)", textTransform: "uppercase", letterSpacing: 1 }}>
+        <h2 style={{ marginBottom: 12, fontSize: 14, color: "var(--accent-secondary)", textTransform: "uppercase", letterSpacing: 1 }}>
           Training Format
-        </h3>
+        </h2>
         <div style={{ display: "grid", gridTemplateColumns: "repeat(2, 1fr)", gap: 8 }}>
           {FORMATS.map((f) => (
             <motion.div
               key={f.id}
+              role="button"
+              tabIndex={0}
+              aria-label={`${f.label} format${f.default ? " (default)" : ""}`}
+              aria-pressed={fmt === f.id}
               whileHover={{ scale: 1.01 }}
               onClick={() => setFmt(f.id)}
+              onKeyDown={(e) => {
+                if (e.key === "Enter" || e.key === " ") {
+                  e.preventDefault();
+                  setFmt(f.id);
+                }
+              }}
               style={{
                 padding: "10px 14px",
                 borderRadius: 6,
@@ -121,9 +131,9 @@ export function FormatExport({ onTrain }: { onTrain?: () => void }) {
 
       {/* Data Summary */}
       <div className="panel" style={{ padding: 20, marginBottom: 20 }}>
-        <h3 style={{ marginBottom: 12, fontSize: 14, color: "var(--accent-secondary)", textTransform: "uppercase", letterSpacing: 1 }}>
+        <h2 style={{ marginBottom: 12, fontSize: 14, color: "var(--accent-secondary)", textTransform: "uppercase", letterSpacing: 1 }}>
           Data Summary
-        </h3>
+        </h2>
         <div style={{ fontSize: 14, marginBottom: 12 }}>Total training pairs: <span style={{ color: "var(--accent)", fontWeight: 700 }}>{accepted.length}</span></div>
         <div style={{ display: "flex", gap: 20, fontSize: 13 }}>
           <span style={{ color: "var(--success)" }}>✓ Correct (auto-approved): {accepted.length}</span>
@@ -134,9 +144,9 @@ export function FormatExport({ onTrain }: { onTrain?: () => void }) {
 
       {/* Output Preview */}
       <div className="panel" style={{ padding: 20, marginBottom: 20 }}>
-        <h3 style={{ marginBottom: 12, fontSize: 14, color: "var(--accent-secondary)", textTransform: "uppercase", letterSpacing: 1 }}>
+        <h2 style={{ marginBottom: 12, fontSize: 14, color: "var(--accent-secondary)", textTransform: "uppercase", letterSpacing: 1 }}>
           Output Preview ({fmt})
-        </h3>
+        </h2>
         <div className="mono" style={{ padding: 12, background: "var(--surface-raised)", borderRadius: 4, fontSize: 12, maxHeight: 300, overflowY: "auto" }}>
           {previewData.length === 0 ? (
             <div style={{ color: "var(--text-dim)" }}>No data to preview. Run a probe and review entries first.</div>

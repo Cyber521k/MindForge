@@ -13,6 +13,13 @@ const NAV_ITEMS: { id: Screen; label: string; icon: string }[] = [
   { id: "settings", label: "Settings", icon: "⚙" },
 ];
 
+/**
+ * Navigation sidebar with 8 screen tabs and version footer.
+ * @param active - Currently active screen ID.
+ * @param onSelect - Callback when a nav item is clicked.
+ * @param model - Optional selected model name (shown in footer).
+ * @param phase - Optional current pipeline phase (shown in footer).
+ */
 export function Sidebar({
   active,
   onSelect,
@@ -25,7 +32,8 @@ export function Sidebar({
   phase?: string;
 }) {
   return (
-    <div
+    <nav
+      aria-label="Main navigation"
       style={{
         width: 220,
         background: "var(--surface)",
@@ -47,8 +55,18 @@ export function Sidebar({
         {NAV_ITEMS.map((item, i) => (
           <motion.div
             key={item.id}
+            role="button"
+            tabIndex={0}
+            aria-current={active === item.id ? "page" : undefined}
+            aria-label={item.label}
             whileHover={{ x: 4 }}
             onClick={() => onSelect(item.id)}
+            onKeyDown={(e) => {
+              if (e.key === "Enter" || e.key === " ") {
+                e.preventDefault();
+                onSelect(item.id);
+              }
+            }}
             style={{
               padding: "10px 16px",
               marginBottom: 2,
@@ -65,7 +83,7 @@ export function Sidebar({
               transition: "background 100ms ease, color 100ms ease",
             }}
           >
-            <span style={{ fontSize: 16 }}>{item.icon}</span>
+            <span style={{ fontSize: 16 }} aria-hidden="true">{item.icon}</span>
             {item.label}
           </motion.div>
         ))}
@@ -83,6 +101,6 @@ export function Sidebar({
         <div>v7.0.0</div>
         {model && <div style={{ color: "var(--text-secondary)" }}>⚕ {model.split("/").pop()}</div>}
       </div>
-    </div>
+    </nav>
   );
 }

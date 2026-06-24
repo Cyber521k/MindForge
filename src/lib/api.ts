@@ -3,7 +3,16 @@ const BASE_URL = "http://localhost:7878";
 
 export async function apiGet<T = any>(path: string): Promise<T> {
   const res = await fetch(`${BASE_URL}${path}`);
-  if (!res.ok) throw new Error(`API ${path}: ${res.statusText}`);
+  if (!res.ok) {
+    let detail = res.statusText;
+    try {
+      const body = await res.json();
+      detail = body.detail || body.error || body.message || detail;
+    } catch {
+      // response had no JSON body — use statusText
+    }
+    throw new Error(`API ${path}: ${detail}`);
+  }
   return res.json();
 }
 
@@ -13,7 +22,16 @@ export async function apiPost<T = any>(path: string, body?: any): Promise<T> {
     headers: { "Content-Type": "application/json" },
     body: body ? JSON.stringify(body) : undefined,
   });
-  if (!res.ok) throw new Error(`API ${path}: ${res.statusText}`);
+  if (!res.ok) {
+    let detail = res.statusText;
+    try {
+      const respBody = await res.json();
+      detail = respBody.detail || respBody.error || respBody.message || detail;
+    } catch {
+      // response had no JSON body — use statusText
+    }
+    throw new Error(`API ${path}: ${detail}`);
+  }
   return res.json();
 }
 

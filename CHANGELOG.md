@@ -1,0 +1,49 @@
+# Changelog
+
+All notable changes to MindForge are documented in this file.
+
+## [7.0.0] - 2026-06-24
+
+### Added
+
+- **11 CLI commands**: detect, models, probe, review, format, convert, quantize, train, evaluate, ingest-pdf, ingest-web
+- **FastAPI sidecar server** with 19 REST routes + WebSocket endpoint (port 7878)
+  - Job management: create, cancel, status, result
+  - WebSocket: heartbeat (30s), subscribe, reconnection
+  - Input validation and structured error handling on all routes
+  - Scoped CORS for localhost origins
+  - Lifespan handler (replaces deprecated @app.on_event)
+- **Tauri 2 desktop app** (.app bundle, 9.0 MB)
+  - Rust IPC commands: start_sidecar, stop_sidecar, sidecar_status
+  - Full icon set (macOS .icns, Windows .ico, iOS, Android)
+- **React frontend** with 8 screens and 10 reusable components
+  - Stats dashboard with 5 SVG/CSS charts (bar, pie, line, progress, cards)
+  - Review dashboard with keyboard shortcuts and help overlay
+  - Settings with API integration and retry
+  - ErrorState and LoadingState reusable components
+- **6 output formats**: DPO, Alpaca, ChatML, completion, openai_messages, template_free
+- **PDF and web ingestion** with prompt injection sanitization
+- **Pluggable model adapters**: MLX, OpenAI, OpenRouter, Exo cluster, Ollama
+- **Hardware auto-detection**: Apple Silicon chip, memory, API keys, exo cluster
+- **SQLite vault** for responses, training entries, review sessions, sources
+- **CI/CD** via GitHub Actions (Python tests on macOS, frontend build on Ubuntu)
+- **415 tests**: 8 phase test files, functional tests, E2E tests (TestClient + WebSocket)
+- **Hermes skill** at ~/.hermes/skills/mlops/mindforge/
+
+### Fixed
+
+- Version mismatch (setup.py and __init__.py: 0.1.0 -> 7.0.0)
+- RuntimeWarning: coroutine never awaited in server.py emit() function
+- Format command: missing output directory creation (FileNotFoundError)
+- CLI: KeyError/NameError risks (dict.get, import guards)
+- CLI: improved error messages with actionable tips across all commands
+- Frontend: tsc zero errors, build passes (403 modules)
+- Tauri: cargo zero warnings, .app bundle valid
+
+### Changed
+
+- FastAPI: migrated from @app.on_event to lifespan context handler
+- FastAPI: rewrote ingest-pdf and ingest-web endpoints with multi-step progress
+- FastAPI: CORS scoped to specific localhost origins (was wildcard *)
+- Design doc: updated TUI references to dashboard (Tauri GUI + CLI)
+- Design doc: updated data directory from ~/mindforge-data/ to data/

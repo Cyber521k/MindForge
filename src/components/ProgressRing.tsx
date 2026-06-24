@@ -1,5 +1,11 @@
 import { motion } from "framer-motion";
 
+/**
+ * Animated circular progress ring using SVG + framer-motion.
+ * @param value - Progress percentage (0-100, clamped).
+ * @param label - Optional label displayed below the percentage.
+ * @param size - Diameter in pixels (default 120).
+ */
 export function ProgressRing({ value, label, size = 120 }: { value: number; label?: string; size?: number }) {
   const pct = Math.min(100, Math.max(0, value));
   return (

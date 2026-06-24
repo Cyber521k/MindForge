@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useMemo, useEffect } from "react";
 import { AnimatePresence, motion } from "framer-motion";
 import type { Screen } from "./lib/theme";
 import { Sidebar } from "./components/Sidebar";
@@ -11,11 +11,26 @@ import { FormatExport } from "./screens/FormatExport";
 import { TrainEvaluate } from "./screens/TrainEvaluate";
 import { Stats } from "./screens/Stats";
 import { Settings } from "./screens/Settings";
+import { apiGet } from "./lib/api";
 
 export default function App() {
   const [screen, setScreen] = useState<Screen>("model-setup");
+  const [connected, setConnected] = useState(false);
 
-  const screens: Record<Screen, JSX.Element> = {
+  // Poll backend connectivity every 5s for StatusBar
+  useEffect(() => {
+    const check = () => {
+      apiGet("/api/hardware")
+        .then(() => setConnected(true))
+        .catch(() => setConnected(false));
+    };
+    check();
+    const interval = setInterval(check, 5000);
+    return () => clearInterval(interval);
+  }, []);
+
+  // Memoize so screen elements are stable references (avoids re-creating all screens on every render)
+  const screens = useMemo<Record<Screen, JSX.Element>>(() => ({
     "model-setup": <ModelSetup />,
     "domain-setup": <DomainSetup />,
     "probing": <ProbingProgress />,
@@ -24,13 +39,13 @@ export default function App() {
     "train": <TrainEvaluate />,
     "stats": <Stats />,
     "settings": <Settings />,
-  };
+  }), []);
 
   return (
     <div style={{ display: "flex", height: "100vh", background: "var(--bg)" }}>
       <Sidebar active={screen} onSelect={setScreen} />
       <div style={{ flex: 1, display: "flex", flexDirection: "column" }}>
-        <div style={{ flex: 1, position: "relative", overflow: "hidden" }}>
+        <main id="main-content" style={{ flex: 1, position: "relative", overflow: "hidden" }}>
           <AnimatePresence mode="wait">
             <motion.div
               key={screen}
@@ -43,8 +58,8 @@ export default function App() {
               {screens[screen]}
             </motion.div>
           </AnimatePresence>
-        </div>
-        <StatusBar phase={screen} />
+        </main>
+        <StatusBar phase={screen} connected={connected} />
       </div>
     </div>
   );

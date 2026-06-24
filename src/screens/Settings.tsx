@@ -87,7 +87,7 @@ export function Settings() {
   }
 
   return (
-    <div style={{ padding: 24, height: "100vh", overflowY: "auto" }}>
+    <div style={{ padding: 24, height: "100%", overflowY: "auto" }}>
       <h1 style={{ fontSize: 24, marginBottom: 20, color: "var(--accent)" }}>Settings</h1>
 
       {/* Save feedback */}
@@ -131,9 +131,9 @@ export function Settings() {
 
       {/* Appearance */}
       <div className="panel" style={{ padding: 20, marginBottom: 20 }}>
-        <h3 style={{ marginBottom: 12, fontSize: 14, color: "var(--accent-secondary)", textTransform: "uppercase", letterSpacing: 1 }}>
+        <h2 style={{ marginBottom: 12, fontSize: 14, color: "var(--accent-secondary)", textTransform: "uppercase", letterSpacing: 1 }}>
           Appearance
-        </h3>
+        </h2>
         <div style={{ marginBottom: 12 }}>
           <label style={{ fontSize: 14, marginRight: 12 }}>Theme:</label>
           {["gold", "cyberpunk", "slate", "mono"].map((t) => (
@@ -179,9 +179,9 @@ export function Settings() {
 
       {/* Probing Config */}
       <div className="panel" style={{ padding: 20, marginBottom: 20 }}>
-        <h3 style={{ marginBottom: 12, fontSize: 14, color: "var(--accent-secondary)", textTransform: "uppercase", letterSpacing: 1 }}>
+        <h2 style={{ marginBottom: 12, fontSize: 14, color: "var(--accent-secondary)", textTransform: "uppercase", letterSpacing: 1 }}>
           Probing Config
-        </h3>
+        </h2>
         <div style={{ marginBottom: 12 }}>
           <label style={{ fontSize: 14, display: "block", marginBottom: 4 }}>
             Auto-approve threshold:
@@ -234,9 +234,9 @@ export function Settings() {
 
       {/* Data Paths (read-only info) */}
       <div className="panel" style={{ padding: 20, marginBottom: 20 }}>
-        <h3 style={{ marginBottom: 12, fontSize: 14, color: "var(--accent-secondary)", textTransform: "uppercase", letterSpacing: 1 }}>
+        <h2 style={{ marginBottom: 12, fontSize: 14, color: "var(--accent-secondary)", textTransform: "uppercase", letterSpacing: 1 }}>
           Data Paths
-        </h3>
+        </h2>
         <div style={{ fontSize: 13, color: "var(--text-secondary)" }}>
           <div>Data: ~/mindforge-data/</div>
           <div>Output: ~/mindforge-data/training-data/</div>
