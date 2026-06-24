@@ -28,7 +28,7 @@ MindForge/
 │   ├── screens/       # 8 screen components
 │   └── components/    # Reusable UI (ErrorState, LoadingState, etc.)
 ├── src-tauri/         # Rust Tauri backend (sidecar lifecycle management)
-├── tests/             # 12 test files (phases 1-8, functional, E2E, edge cases, round 2 features)
+├── tests/             # 14 test files (phases 1-8, functional, E2E, edge cases, round 2, domain expansion, Xbox blades)
 ├── taxonomy/           # MMLU subject taxonomy (57 subjects, 5 domains)
 └── .github/workflows/ # CI pipeline
 ```
@@ -340,6 +340,12 @@ python -m pytest tests/test_edge_cases.py -v
 
 # Run round 2 feature tests (Ollama, async endpoints, DB indexes)
 python -m pytest tests/test_round2_features.py -v
+
+# Run domain expansion tests (new subjects, aliases, taxonomy)
+python -m pytest tests/test_domain_expansion.py -v
+
+# Run Xbox Blades UI tests (transitions, sound, navigation)
+python -m pytest tests/test_xbox_blades.py -v
 ```
 
 ## CI/CD
@@ -368,7 +374,7 @@ MindForge/
 ├── python/server.py     # FastAPI sidecar (20 routes)
 ├── src/                 # React frontend
 ├── src-tauri/           # Rust Tauri backend
-├── tests/               # 12 test files (567 tests)
+├── tests/               # 14 test files (727 tests)
 ├── taxonomy/            # MMLU subject taxonomy
 ├── setup.py             # Python package config
 ├── package.json         # Node package config

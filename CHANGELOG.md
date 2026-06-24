@@ -20,6 +20,10 @@ All notable changes to MindForge are documented in this file.
 - Category count: 5 -> 10 (5 new extended categories)
 - Subject mappings: 57 -> 105 (48 new aliases)
 - taxonomy/subjects.yaml: added Agent_Frameworks, Programming_Languages, Blockchain_Web3, DevOps_Infrastructure, Security_Cryptography categories
+- **Domain expansion tests**: 63 new tests (test_domain_expansion.py) -- new subjects, aliases, taxonomy validation
+- **Xbox Blades tests**: 97 new tests (test_xbox_blades.py) -- blade transitions, sound effects, navigation, accessibility
+- Test count: 567 -> 727 (160 new tests)
+- Test files: 12 -> 14 (added test_domain_expansion.py, test_xbox_blades.py)
 
 ## [7.0.2] - 2026-06-24 (Round 3)
 
@@ -97,7 +101,7 @@ All notable changes to MindForge are documented in this file.
 - **Hardware auto-detection**: Apple Silicon chip, memory, API keys, exo cluster, Ollama
 - **SQLite vault** for responses, training entries, review sessions, sources
 - **CI/CD** via GitHub Actions (Python tests on macOS, frontend build on Ubuntu)
-- **567 tests**: 8 phase test files (280), functional tests (98), E2E tests (37), edge-case tests (89), round 2 feature tests (63)
+- **727 tests**: 8 phase test files (280), functional tests (98), E2E tests (37), edge-case tests (89), round 2 feature tests (63), domain expansion tests (63), Xbox Blades tests (97)
 - **Hermes skill** at ~/.hermes/skills/mlops/mindforge/
 
 ### Fixed

@@ -130,7 +130,6 @@ export function DomainSetup({ onStart }: { onStart?: (subjects: string[], tier: 
             borderRadius: 6,
             color: "var(--text)",
             fontSize: 14,
-            outline: "none",
           }}
         />
         {searchQuery && (
@@ -165,7 +164,7 @@ export function DomainSetup({ onStart }: { onStart?: (subjects: string[], tier: 
             <div
               role="button"
               tabIndex={0}
-              aria-label={`${domain} (${domainSubjects.length} subjects${selectedInDomain > 0 ? `, ${selectedInDomain} selected` : ""})`}
+              aria-label={`${domain.replace(/_/g, " ")} (${domainSubjects.length} subjects${selectedInDomain > 0 ? `, ${selectedInDomain} selected` : ""})`}
               aria-expanded={isExpanded}
               onClick={() => toggleExpand(domain)}
               onKeyDown={(e) => {
@@ -184,7 +183,7 @@ export function DomainSetup({ onStart }: { onStart?: (subjects: string[], tier: 
               }}
             >
               <span style={{ display: "flex", alignItems: "center", gap: 8, fontSize: 15, fontWeight: 600 }}>
-                <span>{icon}</span>
+                <span aria-hidden="true">{icon}</span>
                 {domain.replace(/_/g, " ")}
                 {/* Subject count badge */}
                 <span style={{
@@ -192,7 +191,7 @@ export function DomainSetup({ onStart }: { onStart?: (subjects: string[], tier: 
                   padding: "1px 8px",
                   borderRadius: 10,
                   background: "var(--surface-raised)",
-                  color: "var(--text-secondary)",
+                  color: "var(--text)",
                   fontWeight: 500,
                 }}>
                   {domainSubjects.length}
