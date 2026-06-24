@@ -1,9 +1,10 @@
 import { useState, useMemo, useEffect, useCallback } from "react";
-import { AnimatePresence, motion } from "framer-motion";
+import { AnimatePresence, motion, useReducedMotion } from "framer-motion";
 import type { Screen } from "./lib/theme";
-import { Sidebar } from "./components/Sidebar";
-import { StatusBar } from "./components/StatusBar";
+import { BladeBar } from "./components/BladeBar";
+import { BladeContent } from "./components/BladeContent";
 import { ErrorBoundary } from "./components/ErrorBoundary";
+import { MuteToggle, getSoundEngine } from "./components/SoundManager";
 import { ModelSetup } from "./screens/ModelSetup";
 import { DomainSetup } from "./screens/DomainSetup";
 import { ProbingProgress } from "./screens/ProbingProgress";
@@ -19,11 +20,33 @@ const SCREEN_ORDER: Screen[] = [
   "format", "train", "stats", "settings",
 ];
 
-// Framer Motion variants for blade sweep transition
+const SCREEN_ICONS: Record<Screen, string> = {
+  "model-setup": "🖥",
+  "domain-setup": "📚",
+  "probing": "🔍",
+  "review": "📋",
+  "format": "📦",
+  "train": "🎯",
+  "stats": "📊",
+  "settings": "⚙",
+};
+
+const SCREEN_TITLES: Record<Screen, string> = {
+  "model-setup": "Model Setup",
+  "domain-setup": "Domain Setup",
+  "probing": "Probe Engine",
+  "review": "Review Dashboard",
+  "format": "Format & Export",
+  "train": "Train & Evaluate",
+  "stats": "Statistics",
+  "settings": "Settings",
+};
+
+// Framer Motion variants for blade sweep transition (horizontal)
 const bladeVariants = {
   enter: (direction: number) => ({
     x: direction > 0 ? "100%" : "-100%",
-    rotateY: direction > 0 ? 45 : -45,
+    rotateY: direction > 0 ? 15 : -15,
     opacity: 0,
   }),
   center: {
@@ -32,8 +55,8 @@ const bladeVariants = {
     opacity: 1,
   },
   exit: (direction: number) => ({
-    x: direction > 0 ? "-100%" : "100%",
-    rotateY: direction > 0 ? -45 : 45,
+    x: direction > 0 ? "-30%" : "30%",
+    rotateY: direction > 0 ? -15 : 15,
     opacity: 0,
   }),
 };
@@ -43,6 +66,7 @@ export default function App() {
   const [connected, setConnected] = useState(false);
   const [selectedModel, setSelectedModel] = useState<string>("");
   const [direction, setDirection] = useState(0);
+  const prefersReducedMotion = useReducedMotion();
 
   // Poll backend connectivity every 5s for StatusBar
   useEffect(() => {
@@ -56,23 +80,24 @@ export default function App() {
     return () => clearInterval(interval);
   }, []);
 
-  // Navigate with direction awareness for blade sweep
+  // Navigate with direction awareness and sound
   const navigate = useCallback((target: Screen) => {
     const currentIdx = SCREEN_ORDER.indexOf(screen);
     const targetIdx = SCREEN_ORDER.indexOf(target);
-    setDirection(targetIdx > currentIdx ? 1 : -1);
+    const dir = targetIdx > currentIdx ? 1 : -1;
+    setDirection(dir);
+    getSoundEngine().play("sweep");
     setScreen(target);
   }, [screen]);
 
-  // Arrow key navigation between blades (left/right only — up/down reserved for in-screen nav)
-  // Skip on review screen — it uses arrows for item navigation
+  // Arrow key navigation between blades (left/right only)
   useEffect(() => {
     const handler = (e: KeyboardEvent) => {
       // Don't interfere with typing
       if (e.target instanceof HTMLInputElement || e.target instanceof HTMLTextAreaElement || e.target instanceof HTMLSelectElement) return;
-      // Don't interfere with modifier keys (Ctrl+S, etc.)
+      // Don't interfere with modifier keys
       if (e.ctrlKey || e.metaKey) return;
-      // Review Dashboard uses ArrowLeft/Right/Up/Down for item navigation
+      // Review Dashboard uses ArrowLeft/Right for item navigation
       if (screen === "review") return;
 
       const currentIdx = SCREEN_ORDER.indexOf(screen);
@@ -92,68 +117,152 @@ export default function App() {
     return () => window.removeEventListener("keydown", handler);
   }, [screen, navigate]);
 
-  // Memoize so screen elements are stable references.
-  // Navigation callbacks are wired so "Continue" buttons advance to the next blade.
-  // navigate is included in deps because it depends on [screen].
+  // Memoize screen elements. Navigation callbacks are wired so "Continue"
+  // buttons advance to the next blade. navigate is in deps because it
+  // depends on [screen] for sweep direction.
   const screens = useMemo<Record<Screen, JSX.Element>>(() => ({
-    "model-setup": <ModelSetup onSelectModel={setSelectedModel} onContinue={() => navigate("domain-setup")} />,
-    "domain-setup": <DomainSetup onStart={() => navigate("probing")} />,
-    "probing": <ProbingProgress onReview={() => navigate("review")} />,
-    "review": <ReviewDashboard onFormat={() => navigate("format")} />,
-    "format": <FormatExport onTrain={() => navigate("train")} />,
-    "train": <TrainEvaluate />,
-    "stats": <Stats />,
-    "settings": <Settings />,
+    "model-setup": <BladeContent icon="🖥" title="Model Setup"><ModelSetup onSelectModel={setSelectedModel} onContinue={() => navigate("domain-setup")} /></BladeContent>,
+    "domain-setup": <BladeContent icon="📚" title="Domain Setup"><DomainSetup onStart={() => navigate("probing")} /></BladeContent>,
+    "probing": <BladeContent icon="🔍" title="Probe Engine"><ProbingProgress onReview={() => navigate("review")} /></BladeContent>,
+    "review": <BladeContent icon="📋" title="Review Dashboard"><ReviewDashboard onFormat={() => navigate("format")} /></BladeContent>,
+    "format": <BladeContent icon="📦" title="Format & Export"><FormatExport onTrain={() => navigate("train")} /></BladeContent>,
+    "train": <BladeContent icon="🎯" title="Train & Evaluate"><TrainEvaluate /></BladeContent>,
+    "stats": <BladeContent icon="📊" title="Statistics"><Stats /></BladeContent>,
+    "settings": <BladeContent icon="⚙" title="Settings"><Settings /></BladeContent>,
   }), [navigate]);
 
   return (
     <ErrorBoundary>
-      <div style={{
-        display: "flex",
-        height: "100vh",
-        background: "var(--bg)",
-        perspective: "1400px",
-        perspectiveOrigin: "center center",
-      }}>
-        <Sidebar active={screen} onSelect={navigate} model={selectedModel} />
-        <div style={{ flex: 1, display: "flex", flexDirection: "column", transformStyle: "preserve-3d" }}>
-          <main
-            id="main-content"
-            role="region"
-            aria-label="Screen content"
-            aria-live="polite"
-            style={{
-              flex: 1,
-              position: "relative",
-              overflow: "hidden",
-              transformStyle: "preserve-3d",
-            }}
-          >
-            <AnimatePresence mode="wait" custom={direction}>
-              <motion.div
-                key={screen}
-                custom={direction}
-                variants={bladeVariants}
-                initial="enter"
-                animate="center"
-                exit="exit"
-                transition={{
-                  x: { type: "spring", stiffness: 300, damping: 30 },
-                  rotateY: { type: "spring", stiffness: 300, damping: 30 },
-                  opacity: { duration: 0.2 },
-                }}
-                style={{
-                  height: "100%",
-                  transformStyle: "preserve-3d",
-                  backfaceVisibility: "hidden",
-                }}
-                className="blade-panel"
-              >
+      <div
+        className="xbox-root"
+        style={{
+          display: "flex",
+          flexDirection: "column",
+          height: "100vh",
+          background: "var(--bg)",
+          overflow: "hidden",
+          position: "relative",
+        }}
+      >
+        {/* Top bar: logo + mute toggle */}
+        <div
+          style={{
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "space-between",
+            padding: "8px 20px",
+            background: "linear-gradient(180deg, rgba(27,23,19,0.8) 0%, transparent 100%)",
+            position: "relative",
+            zIndex: 30,
+            flexShrink: 0,
+          }}
+        >
+          <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+            <span className="caduceus" style={{ fontSize: 20 }}>⚕</span>
+            <span style={{ fontSize: 16, fontWeight: 700, color: "var(--accent)" }}>MindForge</span>
+            <span style={{ fontSize: 11, color: "var(--text-dim)", marginLeft: 8 }}>v7.0</span>
+          </div>
+          <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
+            {selectedModel && (
+              <span style={{ fontSize: 11, color: "var(--text-secondary)" }}>
+                ⚕ {selectedModel.split("/").pop()}
+              </span>
+            )}
+            <span style={{ fontSize: 11, color: connected ? "var(--success)" : "var(--error)" }}>
+              {connected ? "● Connected" : "○ Disconnected"}
+            </span>
+            <MuteToggle />
+          </div>
+        </div>
+
+        {/* Upper 2/3: blade content area with 3D perspective */}
+        <div
+          style={{
+            flex: 1,
+            position: "relative",
+            overflow: "hidden",
+            perspective: "1200px",
+            perspectiveOrigin: "center 40%",
+            transformStyle: "preserve-3d",
+          }}
+        >
+          {/* Hexagonal grid background overlay */}
+          <div className="hex-grid" style={{ position: "absolute", inset: 0, pointerEvents: "none", zIndex: 0 }} />
+
+          {/* Scanline overlay */}
+          <div className="scanlines" style={{ position: "absolute", inset: 0, pointerEvents: "none", zIndex: 1 }} />
+
+          <AnimatePresence mode="wait" custom={direction}>
+            <motion.div
+              key={screen}
+              custom={direction}
+              variants={prefersReducedMotion ? {
+                enter: { opacity: 0 },
+                center: { opacity: 1 },
+                exit: { opacity: 0 },
+              } : bladeVariants}
+              initial="enter"
+              animate="center"
+              exit="exit"
+              transition={prefersReducedMotion ? { duration: 0.15 } : {
+                x: { type: "spring", stiffness: 260, damping: 28 },
+                rotateY: { type: "spring", stiffness: 260, damping: 28 },
+                opacity: { duration: 0.25 },
+              }}
+              style={{
+                height: "100%",
+                transformStyle: "preserve-3d",
+                backfaceVisibility: "hidden",
+                position: "relative",
+                zIndex: 2,
+                willChange: "transform, opacity",
+              }}
+            >
+              <main id="main-content" role="region" aria-label={SCREEN_TITLES[screen]} aria-live="polite" style={{ height: "100%" }}>
                 {screens[screen]}
-              </motion.div>
-            </AnimatePresence>
-          </main>
-          <StatusBar phase={screen} model={selectedModel} connected={connected} />
+              </main>
+            </motion.div>
+          </AnimatePresence>
+        </div>
+
+        {/* Bottom: blade bar */}
+        <div
+          style={{
+            height: 100,
+            flexShrink: 0,
+            position: "relative",
+            zIndex: 20,
+          }}
+        >
+          <BladeBar active={screen} onSelect={navigate} direction={direction} />
+        </div>
+
+        {/* Controller hints */}
+        <div
+          style={{
+            position: "absolute",
+            bottom: 4,
+            left: 12,
+            fontSize: 10,
+            color: "var(--text-dim)",
+            zIndex: 25,
+            pointerEvents: "none",
+          }}
+        >
+          ← → Navigate
+        </div>
+        <div
+          style={{
+            position: "absolute",
+            bottom: 4,
+            right: 12,
+            fontSize: 10,
+            color: "var(--text-dim)",
+            zIndex: 25,
+            pointerEvents: "none",
+          }}
+        >
+          Enter = Select
         </div>
       </div>
     </ErrorBoundary>

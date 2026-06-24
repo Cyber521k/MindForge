@@ -186,46 +186,93 @@ Default port: 7878
 
 ## Desktop App (Tauri)
 
-The Tauri desktop app provides a GUI for all MindForge operations with an Xbox Blades-style UI inspired by the original Xbox dashboard.
+The Tauri desktop app provides a GUI for all MindForge operations with an authentic Xbox Blades UI inspired by the original Xbox dashboard.
 
 ### Xbox Blades UI
 
-The interface uses a blade navigation system where each screen is a "blade" that sweeps in and out with 3D perspective transitions:
+The interface recreates the original Xbox dashboard experience with horizontal blade tabs at the bottom of the screen, 3D perspective transitions, frosted glass panels, and programmatic sound effects.
 
-- **Blade sweep transitions** -- Screens slide horizontally with `rotateY` (45deg) and `translateX` via Framer Motion. Direction-aware: sweeping right-to-left when navigating forward, left-to-right when going back.
-- **Perspective container** -- The app uses CSS `perspective: 1400px` with `preserve-3d` for depth.
-- **Blade tabs** -- Vertical sidebar tabs with angled right edges (CSS `clip-path` polygon), gold gradient on active blade, inset glow, and a gold accent indicator bar.
-- **Arrow key navigation** -- ArrowLeft/ArrowRight switch between blades. ArrowUp/ArrowDown reserved for in-screen content navigation.
-- **Accessibility** -- `aria-live="polite"` on `<main>` announces content changes. `AnimatePresence mode="wait"` prevents focus trapping during transitions.
-- **Reduced motion** -- `prefers-reduced-motion` media query disables all animations.
+#### Layout
 
-### Sound Effects (Planned)
+- **Top bar**: Caduceus logo, model name, connection status, mute toggle
+- **Upper 2/3**: Blade content area with 3D perspective (`perspective: 1200px`), hexagonal grid background, and subtle scanline overlay
+- **Bottom**: Horizontal blade bar (`BladeBar.tsx`) with 8 blade tabs
 
-The sound system is designed but not yet implemented. The planned audio feedback:
+#### Blade Bar (BladeBar.tsx)
 
-- **Whoosh** on blade change (300-400ms transition sound)
-- **Click** on menu item selection
-- **Tick** on scroll/navigation
-- **Ambient background music** (toggleable in Settings)
+Horizontal tabs at the bottom of the screen. The active blade expands upward to fill the content area:
 
-Implementation will use Web Audio API or Howler.js, with all sounds toggleable via Settings.
+- Active blade: full height, gold gradient, frosted glass (`backdropFilter: blur(8px)`), gold glow, angled clip-path edges, gold accent indicator bar
+- Inactive blades: 70% height, dimmed, subtle border
+- Spring animation on height/position transitions (stiffness: 300, damping: 25)
+- Plays "sweep" sound on blade change
 
-### Controller Hints (Planned)
+#### Blade Content (BladeContent.tsx)
 
-Bottom-corner controller hints matching the original Xbox dashboard:
-- **A = Select** (bottom right)
-- **B = Back** (bottom left)
+Each screen is wrapped in a two-panel layout:
+
+- **Left panel (32%)**: Large decorative icon (96px, pulsing glow animation), screen title (uppercase, gold, letter-spaced), decorative gradient line
+- **Right panel (68%)**: Scrollable content area for the screen component
+- Frosted glass backgrounds (`backdropFilter: blur(12px)`)
+- Radial spotlight gradient on the background
+
+#### Blade Transitions
+
+- **Sweep animation**: Screens slide horizontally with `rotateY: 15deg` + `translateX` via Framer Motion custom variants
+- **Direction-aware**: Forward navigation sweeps right-to-left, back sweeps left-to-right
+- **Spring physics**: stiffness 260, damping 28 for natural movement
+- `AnimatePresence mode="wait"` prevents overlapping blades
+- `aria-live="polite"` announces content changes to screen readers
+
+#### Sound Effects (SoundManager.tsx)
+
+All sounds are generated programmatically via Web Audio API -- no audio files needed:
+
+| Sound | Trigger | Description |
+|-------|---------|-------------|
+| Sweep | Blade change | Filtered noise burst with pitch sweep (bandpass 400Hz->2000Hz, 350ms) |
+| Select | Menu item selection | Sine wave ping at 800Hz, 50ms decay |
+| Scroll | Navigation scroll | Square wave tick at 1200Hz, 20ms |
+| Back | Back navigation | Reverse whoosh (pitch sweeps 2000Hz->200Hz, 300ms) |
+| Ambient | Optional background | Low drone at 55Hz with LFO modulation (toggleable) |
+
+- Mute toggle in top bar (persists to localStorage)
+- `SoundEngine` singleton via `getSoundEngine()`
+
+#### Visual Effects (index.css)
+
+- **Hexagonal grid**: Three repeating linear gradients at 60deg/-60deg/0deg with radial spotlight (rgba gold, 3% opacity)
+- **Scanlines**: Subtle CRT effect (2px transparent, 1px rgba black 8%, 50% opacity)
+- **Frosted glass**: `.frosted-glass` class -- rgba surface with 12px backdrop blur
+- **Xbox menu items**: `.xbox-menu-item` / `.xbox-menu-item-active` -- gold left border, gradient highlight on active
+
+#### Navigation
+
+- **ArrowLeft/ArrowRight**: Switch between blades (disabled on Review Dashboard -- arrows navigate queue items)
+- **Click blade tab**: Navigate to that blade
+- **Controller hints**: "Left/Right = Navigate" (bottom left), "Enter = Select" (bottom right)
+
+#### Accessibility
+
+- `aria-live="polite"` on main content area
+- `role="tab"` and `aria-selected` on blade tabs
+- `aria-label` on all interactive elements
+- `prefers-reduced-motion` disables all animations
+- Keyboard navigation (Enter/Space on blade tabs)
+- Skip-to-content link for screen reader users
 
 ### Screens
 
-- **Model Setup** - Select and configure models
-- **Domain Setup** - Choose MMLU subjects and probing tier
-- **Probing Progress** - Real-time progress with WebSocket streaming
-- **Review Dashboard** - Accept/Reject/Edit training pairs with keyboard shortcuts
-- **Format Export** - Export in 6 formats
-- **Train & Evaluate** - Launch training and evaluation jobs
-- **Stats** - Aggregate accuracy and training statistics with 5 SVG/CSS charts (bar, pie, line, progress bars, summary cards)
-- **Settings** - Theme, animations, auto-approve threshold, etc.
+| # | Blade | Icon | Description |
+|---|-------|------|-------------|
+| 1 | Model Setup | Monitor | Select and configure models |
+| 2 | Domain Setup | Book | Choose MMLU subjects and probing tier |
+| 3 | Probe Engine | Magnifier | Real-time progress with WebSocket streaming |
+| 4 | Review Dashboard | Clipboard | Accept/Reject/Edit training pairs with keyboard shortcuts |
+| 5 | Format & Export | Package | Export in 6 formats |
+| 6 | Train & Evaluate | Target | Launch training and evaluation jobs |
+| 7 | Statistics | Chart | 5 SVG/CSS charts (bar, pie, line, progress, cards) |
+| 8 | Settings | Gear | Theme, animations, auto-approve threshold, sound toggle |
 
 ### Sidecar Lifecycle
 

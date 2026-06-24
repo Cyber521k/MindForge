@@ -1,5 +1,5 @@
 import { memo } from "react";
-import { motion } from "framer-motion";
+import { motion, useReducedMotion } from "framer-motion";
 import type { Screen } from "../lib/theme";
 import { getSoundEngine } from "./SoundManager";
 
@@ -27,6 +27,10 @@ export const BladeBar = memo(function BladeBar({
   onSelect: (s: Screen) => void;
   direction: number;
 }) {
+  // Compute active index once instead of per-tab findIndex (was O(n²))
+  const activeIdx = BLADE_TABS.findIndex((t) => t.id === active);
+  const prefersReducedMotion = useReducedMotion();
+
   return (
     <nav
       aria-label="Blade navigation"
@@ -44,8 +48,8 @@ export const BladeBar = memo(function BladeBar({
     >
       {BLADE_TABS.map((tab, i) => {
         const isActive = active === tab.id;
-        const isPrev = i === BLADE_TABS.findIndex((t) => t.id === active) - 1;
-        const isNext = i === BLADE_TABS.findIndex((t) => t.id === active) + 1;
+        const isPrev = i === activeIdx - 1;
+        const isNext = i === activeIdx + 1;
 
         return (
           <motion.button
@@ -54,20 +58,20 @@ export const BladeBar = memo(function BladeBar({
             aria-selected={isActive}
             aria-label={tab.label}
             tabIndex={isActive ? 0 : -1}
-            whileHover={{ y: -4, scale: 1.03 }}
-            whileTap={{ y: -2, scale: 0.98 }}
+            whileHover={prefersReducedMotion ? undefined : { y: -4, scale: 1.03 }}
+            whileTap={prefersReducedMotion ? undefined : { y: -2, scale: 0.98 }}
             onClick={() => {
               if (!isActive) {
                 getSoundEngine().play("sweep");
                 onSelect(tab.id);
               }
             }}
-            animate={{
-              height: isActive ? "100%" : "70%",
-              marginTop: isActive ? 0 : "auto",
-              marginBottom: 0,
-            }}
-            transition={{ type: "spring", stiffness: 300, damping: 25 }}
+            animate={
+              prefersReducedMotion
+                ? { scaleY: 1, y: "0%" }
+                : { scaleY: isActive ? 1 : 0.7, y: isActive ? "0%" : "15%" }
+            }
+            transition={prefersReducedMotion ? { duration: 0 } : { type: "spring", stiffness: 300, damping: 25 }}
             style={{
               flex: 1,
               maxWidth: isActive ? 180 : 120,
@@ -110,11 +114,11 @@ export const BladeBar = memo(function BladeBar({
             {/* Large icon */}
             <motion.span
               animate={{
-                fontSize: isActive ? 28 : 20,
+                scale: isActive ? 1.4 : 1,
                 opacity: isActive ? 1 : 0.5,
               }}
               transition={{ duration: 0.2 }}
-              style={{ display: "block", lineHeight: 1 }}
+              style={{ display: "block", lineHeight: 1, fontSize: 20 }}
               aria-hidden="true"
             >
               {tab.icon}

@@ -1,5 +1,5 @@
 import { type ReactNode } from "react";
-import { motion } from "framer-motion";
+import { motion, useReducedMotion } from "framer-motion";
 
 /**
  * BladeContent — wraps screen content in the Xbox blade layout.
@@ -16,6 +16,7 @@ export function BladeContent({
   title: string;
   children: ReactNode;
 }) {
+  const prefersReducedMotion = useReducedMotion();
   return (
     <div
       style={{
@@ -54,13 +55,10 @@ export function BladeContent({
           overflow: "hidden",
         }}
       >
-        {/* Large decorative icon with glow */}
+        {/* Large decorative icon with glow — opacity-only animation (compositor-friendly) */}
         <motion.div
-          animate={{
-            scale: [1, 1.03, 1],
-            opacity: [0.7, 1, 0.7],
-          }}
-          transition={{
+          animate={prefersReducedMotion ? { opacity: 1 } : { opacity: [0.7, 1, 0.7] }}
+          transition={prefersReducedMotion ? { duration: 0 } : {
             duration: 4,
             repeat: Infinity,
             ease: "easeInOut",
@@ -72,6 +70,7 @@ export function BladeContent({
             textShadow:
               "0 0 30px var(--accent-glow), 0 0 60px var(--accent-glow), 0 0 90px rgba(255,215,0,0.1)",
             marginBottom: 16,
+            willChange: "opacity",
           }}
           aria-hidden="true"
         >

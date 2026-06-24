@@ -153,13 +153,13 @@ textarea:focus-visible,
 }
 
 /* ═══════════════════════════════════════════════
-   XBOX BLADES — 3D perspective and blade effects
+   XBOX BLADES — 3D perspective, hex grid, frosted glass
    ═══════════════════════════════════════════════ */
 
 /* 3D perspective context for blade transitions */
 .blade-container {
-  perspective: 1400px;
-  perspective-origin: center center;
+  perspective: 1200px;
+  perspective-origin: center 40%;
   transform-style: preserve-3d;
 }
 
@@ -167,17 +167,107 @@ textarea:focus-visible,
 .blade-panel {
   transform-style: preserve-3d;
   backface-visibility: hidden;
-  will-change: transform, opacity;
 }
 
 /* Active blade tab — gold angled edge */
 .blade-tab-active {
   background: linear-gradient(90deg, var(--surface-raised) 0%, var(--surface) 85%, transparent 100%);
   box-shadow: inset 0 0 20px var(--accent-glow), -2px 0 8px var(--accent-glow);
-  clip-path: polygon(0 0, calc(100% - 12px) 0, 100% 50%, calc(100% - 12px) 100%, 0 100%);
 }
 
 /* Subtle gold border glow on blade content area */
 .blade-glow {
   box-shadow: inset 2px 0 12px var(--accent-glow);
+}
+
+/* ═══════════════════════════════════════════════
+   HEXAGONAL GRID BACKGROUND
+   ═══════════════════════════════════════════════ */
+
+.hex-grid {
+  background-image:
+    repeating-linear-gradient(
+      60deg,
+      transparent 0px,
+      transparent 28px,
+      rgba(205, 127, 50, 0.03) 28px,
+      rgba(205, 127, 50, 0.03) 29px,
+      transparent 29px,
+      transparent 56px
+    ),
+    repeating-linear-gradient(
+      -60deg,
+      transparent 0px,
+      transparent 28px,
+      rgba(205, 127, 50, 0.03) 28px,
+      rgba(205, 127, 50, 0.03) 29px,
+      transparent 29px,
+      transparent 56px
+    ),
+    repeating-linear-gradient(
+      0deg,
+      transparent 0px,
+      transparent 28px,
+      rgba(205, 127, 50, 0.03) 28px,
+      rgba(205, 127, 50, 0.03) 29px,
+      transparent 29px,
+      transparent 56px
+    ),
+    radial-gradient(
+      ellipse 70% 50% at 35% 35%,
+      rgba(255, 215, 0, 0.06) 0%,
+      transparent 60%
+    );
+  opacity: 0.8;
+}
+
+/* ═══════════════════════════════════════════════
+   SCANLINES (subtle retro CRT effect)
+   ═══════════════════════════════════════════════ */
+
+.scanlines {
+  background: repeating-linear-gradient(
+    0deg,
+    transparent 0px,
+    transparent 2px,
+    rgba(0, 0, 0, 0.08) 2px,
+    rgba(0, 0, 0, 0.08) 3px
+  );
+  opacity: 0.5;
+}
+
+/* ═══════════════════════════════════════════════
+   FROSTED GLASS PANEL
+   ═══════════════════════════════════════════════ */
+
+.frosted-glass {
+  background: rgba(27, 23, 19, 0.55);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  border: 1px solid rgba(205, 127, 50, 0.25);
+}
+
+/* ═══════════════════════════════════════════════
+   XBOX-STYLE MENU ITEM HIGHLIGHT
+   ═══════════════════════════════════════════════ */
+
+.xbox-menu-item {
+  padding: 10px 16px;
+  border-radius: 4px;
+  cursor: pointer;
+  transition: all 120ms ease;
+  border-left: 3px solid transparent;
+}
+
+.xbox-menu-item:hover {
+  background: rgba(54, 48, 41, 0.5);
+  border-left-color: var(--accent-dim);
+}
+
+.xbox-menu-item-active {
+  background: linear-gradient(90deg, rgba(255, 215, 0, 0.15) 0%, transparent 100%);
+  border-left: 3px solid var(--accent);
+  box-shadow: inset 0 0 15px var(--accent-glow);
+  color: var(--accent);
+  font-weight: 600;
 }

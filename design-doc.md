@@ -2062,33 +2062,71 @@ Border:         #CD7F32   (Hermes bronze — panel borders)
 - Logo/Caduceus: The ⚕ symbol rendered large in the header with a gold glow
 
 **Motion (Xbox Blades System):**
-- **Blade sweep transitions**: Screens slide horizontally with `rotateY: 45deg` + `translateX: 100%` via Framer Motion custom variants. Direction-aware: forward navigation sweeps right-to-left, back sweeps left-to-right.
-- **3D perspective**: Container uses `perspective: 1400px` with `transform-style: preserve-3d` for depth perception.
-- **Blade tabs**: Sidebar items have angled right edges via CSS `clip-path: polygon(0 0, calc(100% - 12px) 0, 100% 50%, calc(100% - 12px) 100%, 0 100%)`. Active blade has gold gradient, inset glow, and a gold accent indicator bar (Framer Motion `layoutId`).
-- **Arrow key navigation**: ArrowLeft/ArrowRight switch between blades. ArrowUp/ArrowDown reserved for in-screen content. Review Dashboard is exempt (arrows navigate queue items).
-- **Accessibility**: `aria-live="polite"` on `<main>` announces blade changes. `AnimatePresence mode="wait"` ensures exiting blade is removed before new enters (no focus trapping). `prefers-reduced-motion` disables all animations.
-- **Blade sweep timing**: 300-400ms ease-in-out (Framer Motion default transition).
-- **Button hover**: 100ms gold glow expansion
-- **Progress bars**: Smooth animated fill with pulsing gold glow
-- **Loading states**: Pulsing gold ring around the caduceus ⚕
+
+The UI recreates the original Xbox dashboard with horizontal blade tabs at the bottom, 3D sweep transitions, frosted glass panels, and programmatic sound effects.
+
+**Layout:**
+- Top bar: Caduceus logo, model name, connection status, mute toggle
+- Upper 2/3: Blade content area (3D perspective `perspective: 1200px`, hex grid background, scanline overlay)
+- Bottom: Horizontal blade bar (BladeBar.tsx) with 8 blade tabs
+
+**Blade Bar (BladeBar.tsx):**
+- Horizontal tabs at bottom of screen. Active blade expands upward (100% height), inactive blades at 70% height
+- Active blade: gold gradient, frosted glass (`backdrop-filter: blur(8px)`), gold glow (`box-shadow: 0 -4px 20px var(--accent-glow)`), angled clip-path edges, gold accent indicator bar (Framer Motion `layoutId`)
+- Inactive blades: dimmed, subtle border, 1px rgba bronze top border
+- Spring animation on height/position (stiffness: 300, damping: 25)
+- Each tab has icon + label, active icon is 28px, inactive is 20px
+
+**Blade Content (BladeContent.tsx):**
+- Left panel (32%, min 180px, max 300px): Large decorative icon (96px, pulsing scale/opacity animation), screen title (uppercase, gold, letter-spaced 2px), decorative gradient line
+- Right panel (68%): Scrollable content area for screen component
+- Frosted glass backgrounds (`backdrop-filter: blur(12px)`)
+- Radial spotlight gradient on background
+
+**Blade Transitions:**
+- **Sweep animation**: `rotateY: 15deg` + `translateX: 100%` via Framer Motion custom variants
+- **Direction-aware**: Forward = right-to-left sweep, back = left-to-right
+- **Spring physics**: stiffness 260, damping 28
+- **Timing**: 250ms opacity, spring for x/rotateY
+- `AnimatePresence mode="wait"` prevents overlapping blades
+- `aria-live="polite"` on `<main>` for screen reader announcements
+
+**Sound Effects (SoundManager.tsx):**
+
+All sounds generated programmatically via Web Audio API -- no audio files needed:
+
+| Sound | Trigger | Synthesis | Duration |
+|-------|---------|-----------|----------|
+| Sweep | Blade change | Filtered noise burst, bandpass 400Hz->2000Hz, Q=0.8 | 350ms |
+| Select | Menu selection | Sine wave at 800Hz, exponential decay | 50ms |
+| Scroll | Navigation | Square wave at 1200Hz, exponential decay | 20ms |
+| Back | Back navigation | Reverse whoosh, bandpass 2000Hz->200Hz | 300ms |
+| Ambient | Optional background | Sine drone at 55Hz with LFO modulation (0.1Hz) | Continuous |
+
+- `SoundEngine` singleton via `getSoundEngine()`
+- Mute toggle in top bar (persists to `localStorage` as `mindforge-muted`)
+- Unmuting plays a select sound as confirmation
+
+**Visual Effects (index.css):**
+- **Hexagonal grid** (`.hex-grid`): Three repeating linear gradients (60deg, -60deg, 0deg) at 28px intervals with rgba(205,127,50,0.03) lines + radial spotlight gradient
+- **Scanlines** (`.scanlines`): CRT effect -- 2px transparent, 1px rgba(0,0,0,0.08), 50% opacity
+- **Frosted glass** (`.frosted-glass`): rgba(27,23,19,0.55) with 12px backdrop blur
+- **Xbox menu items** (`.xbox-menu-item`, `.xbox-menu-item-active`): Gold left border, gradient highlight on active
+
+**Navigation:**
+- ArrowLeft/ArrowRight: Switch between blades (disabled on Review Dashboard -- arrows navigate queue items)
+- Click blade tab: Navigate to blade (plays sweep sound)
+- Controller hints: "Left/Right = Navigate" (bottom left), "Enter = Select" (bottom right)
 
 **Blade CSS Classes** (in `src/index.css`):
-- `.blade-container` — 3D perspective context (`perspective: 1400px`, `preserve-3d`)
-- `.blade-panel` — blade panel with `preserve-3d` and `backface-visibility: hidden`
-- `.blade-tab-active` — active blade tab styling (gold gradient, inset glow, clip-path)
-- `.blade-glow` — subtle gold border glow on blade content area
-
-**Sound Effects (Planned):**
-- Whoosh on blade change (300-400ms transition sound)
-- Click on menu item selection
-- Tick on scroll/navigation
-- Ambient background music (toggleable in Settings)
-- Implementation: Web Audio API or Howler.js, all toggleable
-
-**Controller Hints (Planned):**
-- A = Select (bottom right corner)
-- B = Back (bottom left corner)
-- Styled to match original Xbox dashboard aesthetic
+- `.blade-container` -- 3D perspective context (`perspective: 1200px`, `preserve-3d`)
+- `.blade-panel` -- blade panel with `preserve-3d` and `backface-visibility: hidden`
+- `.blade-tab-active` -- active blade tab styling (gold gradient, inset glow)
+- `.blade-glow` -- subtle gold border glow on blade content area
+- `.hex-grid` -- hexagonal grid background pattern
+- `.scanlines` -- CRT scanline overlay
+- `.frosted-glass` -- frosted glass panel effect
+- `.xbox-menu-item` / `.xbox-menu-item-active` -- menu item highlight styles
 
 **Audio (optional, toggleable):**
 - Navigation between panels: subtle click

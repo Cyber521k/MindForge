@@ -6,33 +6,29 @@ All notable changes to MindForge are documented in this file.
 
 ### Added
 
-- **Xbox Blades navigation system**: Complete UI redesign inspired by the original Xbox dashboard
-  - 3D blade sweep transitions (Framer Motion `rotateY: 45deg`, `translateX`, direction-aware)
-  - CSS `perspective: 1400px` container with `preserve-3d` for depth
-  - Blade tabs with angled right edges (CSS `clip-path` polygon), gold gradient, inset glow
-  - Gold accent indicator bar on active blade (Framer Motion `layoutId`)
-  - `aria-live="polite"` for screen reader announcements on blade change
-  - `AnimatePresence mode="wait"` to prevent focus trapping
-- **Arrow key navigation**: ArrowLeft/ArrowRight switch between blades, ArrowUp/ArrowDown for in-screen content
-- **Direction-aware transitions**: Navigation direction determines sweep direction (forward = right-to-left, back = left-to-right)
-- **Blade CSS classes**: `.blade-container`, `.blade-panel`, `.blade-tab-active`, `.blade-glow` in index.css
-- **Sidebar as memo**: `React.memo` with angled clip-path tabs and gold indicator
+- **Xbox Blades UI redesign**: Complete recreation of the original Xbox dashboard experience
+  - **BladeBar.tsx**: Horizontal blade tabs at bottom of screen. Active blade expands upward, frosted glass (backdrop-filter blur), gold gradient, angled clip-path edges, spring animations
+  - **BladeContent.tsx**: Two-panel layout per blade -- left 32% decorative icon (96px, pulsing glow) + title, right 68% scrollable content. Frosted glass, radial spotlight gradient
+  - **SoundManager.tsx**: Web Audio API sound engine (no audio files). Sweep (filtered noise, pitch sweep 400-2000Hz), select (sine 800Hz), scroll (square 1200Hz), back (reverse whoosh), ambient drone (55Hz + LFO). Mute toggle persists to localStorage
+  - **Hexagonal grid background**: Three repeating linear gradients (60deg/-60deg/0deg) with radial spotlight (index.css `.hex-grid`)
+  - **Scanline overlay**: Subtle CRT effect (index.css `.scanlines`)
+  - **Frosted glass CSS**: `.frosted-glass` class with 12px backdrop blur
+  - **Xbox menu item styles**: `.xbox-menu-item` / `.xbox-menu-item-active` with gold left border and gradient highlight
+  - **Controller hints**: "Left/Right = Navigate" (bottom left), "Enter = Select" (bottom right)
+  - **3D blade sweep transitions**: rotateY 15deg + translateX, direction-aware, spring physics (stiffness 260, damping 28)
+  - **Arrow key navigation**: ArrowLeft/ArrowRight switch blades (disabled on Review Dashboard)
+  - **Mute toggle**: Top bar button, persists to localStorage, unmute plays select sound
 - **Round 2 feature tests**: 63 new tests (test_round2_features.py) -- Ollama integration, async endpoints, DB indexes, ErrorBoundary
-
-### Planned (Not Yet Implemented)
-
-- **Sound effects**: Whoosh on blade change, click on select, tick on scroll, ambient music (Web Audio API / Howler.js)
-- **Controller hints**: A=Select, B=Back at bottom corners
-- **Frosted glass / translucent blade appearance** with glowing edges
-- **Hexagonal grid background pattern** with radial spotlight gradient
 
 ### Changed
 
 - Test count: 504 -> 567 (63 new round 2 feature tests)
 - Test files: 11 -> 12 (added test_round2_features.py)
-- Screen transitions: simple slide -> 3D blade sweep with perspective and rotateY
-- Navigation: setScreen -> navigate() with direction tracking
-- Sidebar: vertical list -> blade tabs with clip-path angled edges and gold glow
+- App layout: sidebar + content -> top bar + blade content + bottom blade bar
+- Screen transitions: simple slide -> 3D blade sweep with perspective (1200px) and rotateY
+- Navigation: setScreen -> navigate() with direction tracking + sound playback
+- Screens: wrapped in BladeContent (icon + title + content layout)
+- CSS perspective: 1400px -> 1200px, perspective-origin: center -> center 40%
 
 ## [7.0.1] - 2026-06-24 (Round 2)
 

@@ -9,7 +9,7 @@ type SoundType = "sweep" | "select" | "scroll" | "back";
 export class SoundEngine {
   private ctx: AudioContext | null = null;
   private muted = false;
-  private ambientNodes: { osc: OscillatorNode; gain: GainNode } | null = null;
+  private ambientNodes: { osc: OscillatorNode; lfo: OscillatorNode; gain: GainNode } | null = null;
 
   constructor() {
     // Load mute preference
@@ -44,6 +44,10 @@ export class SoundEngine {
     return this.muted;
   }
 
+  // Cache noise buffers to avoid GC pressure on repeated sweep/back calls
+  private sweepBuffer: AudioBuffer | null = null;
+  private backBuffer: AudioBuffer | null = null;
+
   /** Blade sweep: filtered noise burst with pitch sweep (whoosh) */
   sweep() {
     if (this.muted) return;
@@ -53,16 +57,19 @@ export class SoundEngine {
     const now = ctx.currentTime;
     const duration = 0.35;
 
-    // Create noise buffer
-    const bufferSize = ctx.sampleRate * duration;
-    const buffer = ctx.createBuffer(1, bufferSize, ctx.sampleRate);
-    const data = buffer.getChannelData(0);
-    for (let i = 0; i < bufferSize; i++) {
-      data[i] = (Math.random() * 2 - 1) * (1 - i / bufferSize);
+    // Reuse cached noise buffer to avoid per-call allocation
+    if (!this.sweepBuffer) {
+      const bufferSize = ctx.sampleRate * duration;
+      const buffer = ctx.createBuffer(1, bufferSize, ctx.sampleRate);
+      const data = buffer.getChannelData(0);
+      for (let i = 0; i < bufferSize; i++) {
+        data[i] = (Math.random() * 2 - 1) * (1 - i / bufferSize);
+      }
+      this.sweepBuffer = buffer;
     }
 
     const noise = ctx.createBufferSource();
-    noise.buffer = buffer;
+    noise.buffer = this.sweepBuffer;
 
     // Bandpass filter for whoosh effect
     const filter = ctx.createBiquadFilter();
@@ -135,15 +142,19 @@ export class SoundEngine {
     const now = ctx.currentTime;
     const duration = 0.3;
 
-    const bufferSize = ctx.sampleRate * duration;
-    const buffer = ctx.createBuffer(1, bufferSize, ctx.sampleRate);
-    const data = buffer.getChannelData(0);
-    for (let i = 0; i < bufferSize; i++) {
-      data[i] = (Math.random() * 2 - 1) * (i / bufferSize);
+    // Reuse cached noise buffer
+    if (!this.backBuffer) {
+      const bufferSize = ctx.sampleRate * duration;
+      const buffer = ctx.createBuffer(1, bufferSize, ctx.sampleRate);
+      const data = buffer.getChannelData(0);
+      for (let i = 0; i < bufferSize; i++) {
+        data[i] = (Math.random() * 2 - 1) * (i / bufferSize);
+      }
+      this.backBuffer = buffer;
     }
 
     const noise = ctx.createBufferSource();
-    noise.buffer = buffer;
+    noise.buffer = this.backBuffer;
 
     const filter = ctx.createBiquadFilter();
     filter.type = "bandpass";
@@ -188,13 +199,16 @@ export class SoundEngine {
     gain.connect(ctx.destination);
     osc.start();
     lfo.start();
-    this.ambientNodes = { osc, gain };
+    this.ambientNodes = { osc, lfo, gain };
   }
 
   stopAmbient() {
     if (this.ambientNodes) {
       try {
         this.ambientNodes.osc.stop();
+      } catch {}
+      try {
+        this.ambientNodes.lfo.stop();
       } catch {}
       this.ambientNodes = null;
     }
