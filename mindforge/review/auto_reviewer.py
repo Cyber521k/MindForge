@@ -12,6 +12,11 @@ import json
 import logging
 import hashlib
 
+try:
+    import requests
+except ImportError:
+    requests = None
+
 logger = logging.getLogger(__name__)
 
 
@@ -85,7 +90,10 @@ class AutoReviewer:
             from mindforge.hardware.ollama_detector import detect_ollama
             ollama_info = detect_ollama()
             if ollama_info.get("running") and ollama_info.get("models"):
-                model_name = ollama_info["models"][0].get("name", "llama3.1:latest")
+                # detect_ollama() returns model names as strings, not dicts
+                model_name = ollama_info["models"][0]
+                if isinstance(model_name, dict):
+                    model_name = model_name.get("name", "llama3.1:latest")
                 adapter = create_adapter(f"ollama/{model_name}")
                 logger.info(f"Auto-detected Ollama judge ({model_name})")
                 return adapter
@@ -177,6 +185,9 @@ class AutoReviewer:
     def review_batch(self, entries, on_progress=None):
         """Review multiple training entries.
 
+        Includes a small delay between judge LLM calls to avoid hitting
+        API rate limits (OpenAI: 500 RPM, OpenRouter: varies).
+
         Args:
             entries: List of entry dicts
             on_progress: Optional callback(current, total, result)
@@ -184,6 +195,8 @@ class AutoReviewer:
         Returns:
             List of review result dicts
         """
+        import time as _time
+
         results = []
         total = len(entries)
 
@@ -193,6 +206,11 @@ class AutoReviewer:
 
             if on_progress:
                 on_progress(i + 1, total, result)
+
+            # Rate limit: small delay between LLM calls to avoid API throttling.
+            # 0.5s delay = max 120 calls/min, well under OpenAI's 500 RPM limit.
+            if i < total - 1 and self.judge_adapter is not None:
+                _time.sleep(0.5)
 
         return results
 
@@ -251,17 +269,47 @@ class AutoReviewer:
 
     def _parse_judge_response(self, response):
         """Parse the judge LLM response into a structured verdict."""
+        # Try to extract a JSON object from the response.
+        # Use a brace-matching approach instead of regex to handle
+        # nested braces inside string values (e.g., explanations
+        # that mention {A} or {B}).
         try:
-            json_match = re.search(r'\{[^}]+\}', response, re.DOTALL)
-            if json_match:
-                data = json.loads(json_match.group(0))
-                return {
-                    "correct": bool(data.get("correct", False)),
-                    "confidence": float(data.get("confidence", 0.5)),
-                    "explanation": str(data.get("explanation", "No explanation provided.")),
-                }
-        except (json.JSONDecodeError, ValueError) as e:
-            logger.warning(f"Failed to parse judge response as JSON: {e}")
+            # First, try parsing the entire response as JSON
+            data = json.loads(response.strip())
+            return {
+                "correct": bool(data.get("correct", False)),
+                "confidence": float(data.get("confidence", 0.5)),
+                "explanation": str(data.get("explanation", "No explanation provided.")),
+            }
+        except (json.JSONDecodeError, ValueError, TypeError):
+            pass
+
+        # Try to find a JSON object by brace matching
+        try:
+            start = response.find("{")
+            while start != -1:
+                depth = 0
+                for i in range(start, len(response)):
+                    if response[i] == "{":
+                        depth += 1
+                    elif response[i] == "}":
+                        depth -= 1
+                        if depth == 0:
+                            candidate = response[start:i + 1]
+                            try:
+                                data = json.loads(candidate)
+                                return {
+                                    "correct": bool(data.get("correct", False)),
+                                    "confidence": float(data.get("confidence", 0.5)),
+                                    "explanation": str(data.get("explanation", "No explanation provided.")),
+                                }
+                            except (json.JSONDecodeError, ValueError, TypeError):
+                                break  # try next start
+                start = response.find("{", start + 1)
+        except Exception:
+            pass
+
+        logger.warning("Failed to parse judge response as JSON, using text fallback.")
 
         # Fallback: infer from text
         response_lower = response.lower()
@@ -286,8 +334,11 @@ class AutoReviewer:
         """
         result = {"found": False, "answer": "", "source_url": "", "snippet": ""}
 
+        if requests is None:
+            logger.warning("requests library not available. Web search disabled.")
+            return result
+
         try:
-            import requests
             from urllib.parse import quote_plus
 
             # Use DuckDuckGo Lite (no API key needed)

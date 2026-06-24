@@ -500,6 +500,50 @@ The human review gate is built into MindForge itself -- no external tools needed
 
 ### Review Flow
 
+MindForge supports both **manual** and **automated** review modes.
+
+#### Automated Review (AutoReviewer)
+
+```
+Training entry comes in (prompt + chosen + rejected)
+       │
+       ▼
+┌──────────────┐
+│ Layer 1:     │  Send question + answers to judge LLM
+│ LLM Judge    │  (GPT-4o, Claude, Ollama, or MLX — auto-detected)
+│              │  Judge returns: correct/incorrect + confidence 0.0-1.0
+└──────┬───────┘
+       │ Confidence < 0.7?
+       ▼
+┌──────────────┐
+│ Layer 2:     │  Web search via DuckDuckGo Lite (no API key)
+│ Web Search   │  Find correct answer from web sources
+│ (fallback)   │  Re-judge with web-sourced answer
+└──────┬───────┘
+       │
+       ▼
+┌──────────────┐
+│ Action:      │  confidence >= 0.7 + correct → accept
+│ Determine    │  web correction found → edit (with source URL)
+│              │  confidence < 0.3 → reject
+│              │  otherwise → accept (default)
+└──────┬───────┘
+       │
+       ▼
+┌──────────────┐
+│ Apply to DB  │  Update entry status, store review session
+│ + WebSocket  │  Emit progress (accept/reject/edit + confidence)
+└──────────────┘
+```
+
+**CLI:** `mindforge review --auto --judge-model gpt-4o --no-web`
+
+**API:** `POST /api/review/auto` (async job) or `POST /api/review/auto/entry/{id}` (single)
+
+**Judge auto-detection priority:** OpenAI > OpenRouter > Ollama > MLX
+
+#### Manual Review (default)
+
 ```
 Response comes in
        │
@@ -529,6 +573,8 @@ Response comes in
 │ Human Review │  (never auto-approve if all layers are uncertain)
 └──────────────┘
 ```
+
+**CLI:** `mindforge review` (interactive Accept/Reject/Edit/Skip)
 
 ### Confidence Score
 Every response gets a confidence score (0.0 - 1.0):

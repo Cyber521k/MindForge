@@ -10,7 +10,13 @@ import { motion } from "framer-motion";
 export const ProgressRing = memo(function ProgressRing({ value, label, size = 120 }: { value: number; label?: string; size?: number }) {
   const pct = Math.min(100, Math.max(0, value));
   return (
-    <div style={{ width: size, height: size, position: "relative", display: "flex", alignItems: "center", justifyContent: "center" }}>
+    <div
+      role="progressbar"
+      aria-valuenow={Math.round(pct)}
+      aria-valuemin={0}
+      aria-valuemax={100}
+      aria-label={label ? `${label}: ${pct.toFixed(0)}%` : `Progress: ${pct.toFixed(0)}%`}
+      style={{ width: size, height: size, position: "relative", display: "flex", alignItems: "center", justifyContent: "center" }}>
       <svg width={size} height={size} style={{ transform: "rotate(-90deg)" }}>
         <circle cx={size/2} cy={size/2} r={size/2 - 8} fill="none" stroke="var(--surface-raised)" strokeWidth={6} />
         <motion.circle

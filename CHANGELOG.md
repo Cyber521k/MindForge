@@ -2,6 +2,36 @@
 
 All notable changes to MindForge are documented in this file.
 
+## [7.2.0] - 2026-06-24 (Automated Review)
+
+### Added
+
+- **AutoReviewer** (`mindforge/review/auto_reviewer.py`): Automated review of training entries using LLM-as-judge + web search
+  - Judge LLM evaluates chosen/rejected answers for correctness
+  - Web search fallback (DuckDuckGo Lite, no API key) when judge confidence < 0.7
+  - Auto-detects judge model: OpenAI > OpenRouter > Ollama > MLX
+  - Returns action: accept / reject / edit with confidence score
+  - Batch review with progress callback
+- **CLI auto-review flags**:
+  - `--auto`: Enable automated review mode (default: manual interactive)
+  - `--judge-model`: Specify judge model (e.g., gpt-4o, openrouter/anthropic/claude-3.5-sonnet)
+  - `--no-web`: Disable web search fallback for uncertain answers
+- **`auto_review_session()`** in `mindforge/vault/review.py`: Runs AutoReviewer on pending entries, applies results to DB
+- **3 new FastAPI routes**:
+  - `POST /api/review/auto` -- Start automated review job (streams progress via WebSocket)
+  - `GET /api/review/auto/{job_id}` -- Get auto-review job status
+  - `POST /api/review/auto/entry/{entry_id}` -- Auto-review a single entry (synchronous)
+- **2 new taxonomy routes**:
+  - `GET /api/taxonomy/search` -- Search taxonomy by query
+  - `GET /api/taxonomy/{domain}` -- Get subjects for a specific domain
+
+### Changed
+
+- REST API routes: 19 -> 24 (5 new routes)
+- Total endpoints: 20 -> 25 (24 REST + 1 WebSocket)
+- Review command: now supports both manual and automated modes
+- Route count in docs updated accordingly
+
 ## [7.1.0] - 2026-06-24 (Domain Expansion)
 
 ### Added
@@ -101,7 +131,7 @@ All notable changes to MindForge are documented in this file.
 - **Hardware auto-detection**: Apple Silicon chip, memory, API keys, exo cluster, Ollama
 - **SQLite vault** for responses, training entries, review sessions, sources
 - **CI/CD** via GitHub Actions (Python tests on macOS, frontend build on Ubuntu)
-- **727 tests**: 8 phase test files (280), functional tests (98), E2E tests (37), edge-case tests (89), round 2 feature tests (63), domain expansion tests (63), Xbox Blades tests (97)
+- **786 tests**: 8 phase test files (280), functional tests (98), E2E tests (37), edge-case tests (89), round 2 feature tests (63), domain expansion tests (63), Xbox Blades tests (97)
 - **Hermes skill** at ~/.hermes/skills/mlops/mindforge/
 
 ### Fixed

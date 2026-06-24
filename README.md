@@ -23,7 +23,7 @@ MindForge/
 │   ├── evaluate/      # Model evaluation (lm-eval-harness, mlx)
 │   ├── ingest/        # PDF/web extraction, sanitization, Q&A generation
 │   └── vault/         # SQLite database + review system
-├── python/server.py   # FastAPI sidecar server (20 routes, WebSocket streaming)
+├── python/server.py   # FastAPI sidecar server (25 routes, WebSocket streaming)
 ├── src/               # React frontend (Tauri webview)
 │   ├── screens/       # 8 screen components
 │   └── components/    # Reusable UI (ErrorState, LoadingState, etc.)
@@ -98,10 +98,34 @@ Available subjects: 110 across 10 categories (57 MMLU + 53 extended). Run `mindf
 ### Review Training Entries
 
 ```bash
+# Manual interactive review (default)
 mindforge review
+
+# Automated review using LLM-as-judge
+mindforge review --auto
+
+# Automated review with specific judge model
+mindforge review --auto --judge-model gpt-4o
+
+# Automated review without web search fallback
+mindforge review --auto --no-web
 ```
 
-Interactive review of generated training pairs (Accept / Reject / Edit / Skip).
+**Manual mode** (default): Interactive review of training pairs (Accept / Reject / Edit / Skip).
+
+**Auto mode** (`--auto`): Uses an LLM-as-judge to automatically review training entries. The judge evaluates each entry's chosen/rejected answers for correctness. If confidence is below 0.7, web search (DuckDuckGo, no API key needed) is used to find the correct answer and correct the entry.
+
+Flags:
+- `--auto`         : Enable automated review (default: manual interactive)
+- `--judge-model`   : Specify judge model (e.g., `gpt-4o`, `openrouter/anthropic/claude-3.5-sonnet`). If omitted, auto-detects from API keys (OpenAI > OpenRouter > Ollama > MLX).
+- `--no-web`        : Disable web search fallback for uncertain answers
+- `--limit`         : Maximum entries to review (default: 100)
+
+Judge model auto-detection priority:
+1. OpenAI (OPENAI_API_KEY) -- GPT-4o
+2. OpenRouter (OPENROUTER_API_KEY) -- Claude 3.5 Sonnet
+3. Ollama (if running locally) -- first available model
+4. MLX local model -- Llama-3.2-3B-Instruct-4bit
 
 ### Format Output
 
@@ -150,7 +174,7 @@ Extracts content from web pages, sanitizes against prompt injection, generates Q
 
 ## FastAPI Server
 
-The sidecar server (`python/server.py`) exposes 19 REST API routes and a WebSocket endpoint for real-time progress streaming.
+The sidecar server (`python/server.py`) exposes 24 REST API routes and a WebSocket endpoint for real-time progress streaming.
 
 ### Running the Server
 
@@ -172,6 +196,11 @@ Default port: 7878
 | POST | `/api/probe` | Start probing job |
 | GET  | `/api/probe/{job_id}` | Get probe status |
 | POST | `/api/review/{entry_id}` | Submit review action |
+| POST | `/api/review/auto` | Start automated review job |
+| GET  | `/api/review/auto/{job_id}` | Get auto-review job status |
+| POST | `/api/review/auto/entry/{entry_id}` | Auto-review single entry |
+| GET  | `/api/taxonomy/search` | Search taxonomy by query |
+| GET  | `/api/taxonomy/{domain}` | Get subjects for a domain |
 | POST | `/api/format` | Format training data |
 | POST | `/api/convert` | Convert model |
 | POST | `/api/quantize` | Quantize model |
@@ -371,10 +400,10 @@ MindForge/
 │   ├── evaluate/        # Model evaluation
 │   ├── ingest/          # PDF + web ingestion
 │   └── vault/           # SQLite database + review
-├── python/server.py     # FastAPI sidecar (20 routes)
+├── python/server.py     # FastAPI sidecar (25 routes)
 ├── src/                 # React frontend
 ├── src-tauri/           # Rust Tauri backend
-├── tests/               # 14 test files (727 tests)
+├── tests/               # 14 test files (786 tests)
 ├── taxonomy/            # MMLU subject taxonomy
 ├── setup.py             # Python package config
 ├── package.json         # Node package config

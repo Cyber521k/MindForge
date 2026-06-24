@@ -212,6 +212,12 @@ class ReviewRequest(BaseModel):
     edited_rejected: Optional[str] = None
 
 
+class AutoReviewRequest(BaseModel):
+    limit: int = 100
+    judge_model: Optional[str] = None
+    web_search: bool = True
+
+
 class FormatRequest(BaseModel):
     input: str
     format: str = "dpo"
@@ -477,6 +483,196 @@ async def get_probe_status(job_id: str):
     if job_id not in _jobs:
         raise HTTPException(status_code=404, detail="Job not found")
     return public_job(_jobs[job_id])
+
+
+@app.post("/api/review/auto")
+async def start_auto_review(req: AutoReviewRequest):
+    """Start an automated review job on pending entries — returns job_id, streams progress via WebSocket."""
+    if req.limit < 1:
+        raise HTTPException(status_code=400, detail="Limit must be >= 1")
+
+    job_id = create_job("auto-review")
+
+    def run():
+        try:
+            from mindforge.review.auto_reviewer import AutoReviewer
+            from mindforge.vault.database import Database
+            from mindforge.probe.adapters import create_adapter
+
+            if is_job_cancelled(job_id):
+                return
+
+            emit({"type": "auto_review_started", "job_id": job_id, "limit": req.limit})
+
+            # Build judge adapter if model specified
+            judge_adapter = None
+            if req.judge_model:
+                try:
+                    judge_adapter = create_adapter(req.judge_model)
+                except Exception as e:
+                    logger.warning(f"Failed to create judge adapter for '{req.judge_model}': {e}")
+
+            reviewer = AutoReviewer(
+                judge_adapter=judge_adapter,
+                web_search_enabled=req.web_search,
+            )
+
+            db = Database(os.path.join(_PROJECT_ROOT, "data", "mindforge.db"))
+            try:
+                entries = db.get_pending_entries(limit=req.limit)
+            finally:
+                db.close()
+
+            if not entries:
+                finish_job(job_id, {
+                    "reviewed": 0,
+                    "accepted": 0,
+                    "rejected": 0,
+                    "edited": 0,
+                    "skipped": 0,
+                    "message": "No pending entries to review",
+                })
+                return
+
+            emit({"type": "progress", "job_id": job_id, "progress": 10,
+                  "stage": "entries_loaded", "count": len(entries)})
+
+            stats = {"reviewed": 0, "accepted": 0, "rejected": 0, "edited": 0, "skipped": 0}
+            results = []
+
+            for i, entry in enumerate(entries):
+                if is_job_cancelled(job_id):
+                    break
+
+                result = reviewer.review_entry(entry)
+                results.append({"entry_id": entry.get("id"), "result": result})
+                stats["reviewed"] += 1
+                action = result.get("action", "skip")
+
+                if action == "accept":
+                    stats["accepted"] += 1
+                elif action == "reject":
+                    stats["rejected"] += 1
+                elif action == "edit":
+                    stats["edited"] += 1
+                else:
+                    stats["skipped"] += 1
+
+                # Apply to database
+                db2 = Database(os.path.join(_PROJECT_ROOT, "data", "mindforge.db"))
+                try:
+                    entry_id = entry.get("id")
+                    if entry_id:
+                        if action == "accept":
+                            db2.update_entry_status(entry_id, "accepted")
+                            db2.store_review_session(entry_id, "accept")
+                        elif action == "reject":
+                            db2.update_entry_status(entry_id, "rejected")
+                            db2.store_review_session(entry_id, "reject")
+                        elif action == "edit":
+                            edited_chosen = result.get("edited_chosen")
+                            edited_rejected = result.get("edited_rejected")
+                            if edited_chosen:
+                                db2.update_training_entry(entry_id, chosen=edited_chosen)
+                            if edited_rejected:
+                                db2.update_training_entry(entry_id, rejected=edited_rejected)
+                            db2.update_entry_status(entry_id, "edited")
+                            db2.store_review_session(entry_id, "edit",
+                                                     edited_chosen=edited_chosen,
+                                                     edited_rejected=edited_rejected)
+                finally:
+                    db2.close()
+
+                # Emit progress
+                progress = 10 + int(85 * (i + 1) / len(entries))
+                emit({"type": "progress", "job_id": job_id, "progress": progress,
+                      "current": i + 1, "total": len(entries),
+                      "action": action, "confidence": result.get("confidence", 0)})
+
+            try:
+                reviewer.close()
+            except Exception:
+                pass
+
+            finish_job(job_id, {**stats, "results": results})
+        except Exception as e:
+            fail_job(job_id, str(e))
+            logger.error(f"Auto-review job {job_id} failed: {e}")
+
+    start_job_thread(job_id, run)
+    return {"job_id": job_id, "status": "started"}
+
+
+@app.get("/api/review/auto/{job_id}")
+async def get_auto_review_status(job_id: str):
+    """Get status and results of an auto-review job."""
+    if job_id not in _jobs:
+        raise HTTPException(status_code=404, detail="Job not found")
+    if _jobs[job_id]["type"] != "auto-review":
+        raise HTTPException(status_code=400, detail=f"Job {job_id} is not an auto-review job")
+    return public_job(_jobs[job_id])
+
+
+@app.post("/api/review/auto/entry/{entry_id}")
+async def auto_review_single_entry(entry_id: int):
+    """Auto-review a single training entry — returns the review result immediately."""
+    def _review_one():
+        from mindforge.review.auto_reviewer import AutoReviewer
+        from mindforge.vault.database import Database
+
+        db = Database(os.path.join(_PROJECT_ROOT, "data", "mindforge.db"))
+        try:
+            cursor = db.conn.cursor()
+            cursor.execute("SELECT * FROM training_entries WHERE id = ?", (entry_id,))
+            row = cursor.fetchone()
+            if row is None:
+                raise HTTPException(status_code=404, detail=f"Training entry {entry_id} not found")
+            entry = dict(row)
+        finally:
+            db.close()
+
+        reviewer = AutoReviewer()
+        try:
+            result = reviewer.review_entry(entry)
+        finally:
+            try:
+                reviewer.close()
+            except Exception:
+                pass
+
+        # Apply result to database
+        action = result.get("action", "skip")
+        db2 = Database(os.path.join(_PROJECT_ROOT, "data", "mindforge.db"))
+        try:
+            if action == "accept":
+                db2.update_entry_status(entry_id, "accepted")
+                db2.store_review_session(entry_id, "accept")
+            elif action == "reject":
+                db2.update_entry_status(entry_id, "rejected")
+                db2.store_review_session(entry_id, "reject")
+            elif action == "edit":
+                edited_chosen = result.get("edited_chosen")
+                edited_rejected = result.get("edited_rejected")
+                if edited_chosen:
+                    db2.update_training_entry(entry_id, chosen=edited_chosen)
+                if edited_rejected:
+                    db2.update_training_entry(entry_id, rejected=edited_rejected)
+                db2.update_entry_status(entry_id, "edited")
+                db2.store_review_session(entry_id, "edit",
+                                         edited_chosen=edited_chosen,
+                                         edited_rejected=edited_rejected)
+        finally:
+            db2.close()
+
+        emit({"type": "auto_review_entry", "entry_id": entry_id, "action": action})
+        return {"entry_id": entry_id, **result}
+    try:
+        return await asyncio.to_thread(_review_one)
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Auto-review of entry {entry_id} failed: {e}")
+        raise HTTPException(status_code=500, detail=f"Auto-review failed: {e}")
 
 
 @app.post("/api/review/{entry_id}")

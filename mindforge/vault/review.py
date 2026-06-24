@@ -183,6 +183,9 @@ def auto_review_session(db, auto_reviewer, limit=100):
             db.store_review_session(entry["id"], "skip")
             stats["skipped"] += 1
 
+    # Batch commit all DB changes at once (avoids N individual fsync calls)
+    db.conn.commit()
+
     print(f"\n{'='*60}")
     print(f"  Automated Review Complete")
     print(f"{'='*60}")
