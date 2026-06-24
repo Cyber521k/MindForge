@@ -53,7 +53,7 @@ All notable changes to MindForge are documented in this file.
 - detect command: now shows Ollama models when running
 - models command: now lists Ollama models with usage hint
 
-## [7.0.0] - 2026-06-24
+## [0.0.1] - 2026-06-24
 
 ### Added
 
@@ -83,7 +83,7 @@ All notable changes to MindForge are documented in this file.
 
 ### Fixed
 
-- Version mismatch (setup.py and __init__.py: 0.1.0 -> 7.0.0)
+- Version mismatch: setup.py and __init__.py updated from 0.1.0 to 0.0.1
 - RuntimeWarning: coroutine never awaited in server.py emit() function
 - Format command: missing output directory creation (FileNotFoundError)
 - CLI: KeyError/NameError risks (dict.get, import guards)

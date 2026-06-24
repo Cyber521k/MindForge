@@ -137,7 +137,7 @@ export const Sidebar = memo(function Sidebar({
           color: "var(--text-dim)",
         }}
       >
-        <div>v7.0.0</div>
+        <div>v0.0.1</div>
         {model && (
           <div style={{ color: "var(--text-secondary)", fontSize: 10, marginTop: 2, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
             ⚕ {model.split("/").pop()}

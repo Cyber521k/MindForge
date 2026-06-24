@@ -61,7 +61,7 @@ async def lifespan(app: FastAPI):
     logger.info("MindForge sidecar shut down")
 
 
-app = FastAPI(title="MindForge Sidecar", version="7.0.0", lifespan=lifespan)
+app = FastAPI(title="MindForge Sidecar", version="0.0.1", lifespan=lifespan)
 
 app.add_middleware(
     CORSMiddleware,

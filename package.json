@@ -1,6 +1,6 @@
 {
   "name": "mindforge",
-  "version": "7.0.0",
+  "version": "0.0.1",
   "description": "MindForge - AI model probing and correction desktop app",
   "type": "module",
   "scripts": {
