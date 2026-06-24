@@ -3,6 +3,7 @@ import { motion } from "framer-motion";
 import { apiGet, apiPost, type TrainingEntry } from "../lib/api";
 import { LoadingState } from "../components/LoadingState";
 import { ErrorState } from "../components/ErrorState";
+import { EmptyState } from "../components/EmptyState";
 
 const FORMATS = [
   { id: "dpo", label: "DPO Preference", desc: "prompt / chosen / rejected", default: true },
@@ -83,6 +84,20 @@ export function FormatExport({ onTrain }: { onTrain?: () => void }) {
         <ErrorState message={`Failed to load training entries: ${error}`} onRetry={load} />
       </div>
     );
+
+  // Empty state: no training entries at all
+  if (entries.length === 0) {
+    return (
+      <div style={{ padding: 24, height: "100%", overflowY: "auto" }}>
+        <h1 style={{ fontSize: 24, marginBottom: 20, color: "var(--accent)" }}>Format & Export</h1>
+        <EmptyState
+          icon="📦"
+          title="No training data available"
+          message="Run a probe and review entries to generate training data for export."
+        />
+      </div>
+    );
+  }
 
   return (
     <div style={{ padding: 24, height: "100%", overflowY: "auto" }}>

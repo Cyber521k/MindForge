@@ -13,7 +13,7 @@ MindForge/
 ├── mindforge/          # Python package (CLI + pipeline modules)
 │   ├── __main__.py    # Entry point: `python -m mindforge`
 │   ├── cli.py         # CLI with 11 commands
-│   ├── hardware/      # Hardware detection (Apple Silicon, API keys, exo clusters)
+│   ├── hardware/      # Hardware detection (Apple Silicon, API keys, exo, Ollama)
 │   ├── probe/         # MMLU probing engine and adapters
 │   ├── score/         # Answer scoring, confidence, judge
 │   ├── correct/       # Analyzer + corrector for DPO pair generation
@@ -28,7 +28,7 @@ MindForge/
 │   ├── screens/       # 8 screen components
 │   └── components/    # Reusable UI (ErrorState, LoadingState, etc.)
 ├── src-tauri/         # Rust Tauri backend (sidecar lifecycle management)
-├── tests/             # 10 test files (phases 1-8, functional, E2E)
+├── tests/             # 11 test files (phases 1-8, functional, E2E, edge cases)
 ├── taxonomy/           # MMLU subject taxonomy (57 subjects, 5 domains)
 └── .github/workflows/ # CI pipeline
 ```
@@ -65,7 +65,7 @@ pnpm tauri build  # production build
 mindforge detect
 ```
 
-Shows Apple Silicon chip info, memory, available API keys, and exo cluster status.
+Shows Apple Silicon chip info, memory, available API keys, exo cluster status, and Ollama models.
 
 Options:
 - `--verbose` : Show detailed hardware info including exo cluster nodes
@@ -77,7 +77,7 @@ Options:
 mindforge models
 ```
 
-Lists available local (MLX) and cloud (OpenAI, Anthropic) models.
+Lists available local (MLX, Ollama) and cloud (OpenAI, Anthropic, OpenRouter) models.
 
 ### Probe a Model
 
@@ -231,6 +231,9 @@ python -m pytest tests/test_functional.py -v
 
 # Run E2E tests (full pipeline, FastAPI TestClient, WebSocket)
 python -m pytest tests/test_e2e.py -v
+
+# Run edge-case tests (error handling, boundary conditions)
+python -m pytest tests/test_edge_cases.py -v
 ```
 
 ## CI/CD
@@ -259,7 +262,7 @@ MindForge/
 ├── python/server.py     # FastAPI sidecar (20 routes)
 ├── src/                 # React frontend
 ├── src-tauri/           # Rust Tauri backend
-├── tests/               # 10 test files (415+ tests)
+├── tests/               # 11 test files (504 tests)
 ├── taxonomy/            # MMLU subject taxonomy
 ├── setup.py             # Python package config
 ├── package.json         # Node package config

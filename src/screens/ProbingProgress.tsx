@@ -100,10 +100,18 @@ export function ProbingProgress({ onReview }: { onReview?: () => void }) {
     }
   };
 
-  const stop = () => {
+  const stop = async () => {
     setRunning(false);
     setPaused(false);
     if (pollRef.current) clearInterval(pollRef.current);
+    // Call cancel endpoint if we have a job ID
+    if (jobId) {
+      try {
+        await apiPost(`/api/jobs/${jobId}/cancel`);
+      } catch {
+        // Best-effort cancel — server may not support it or job may already be done
+      }
+    }
   };
 
   return (

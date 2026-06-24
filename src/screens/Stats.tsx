@@ -3,6 +3,7 @@ import { motion } from "framer-motion";
 import { apiGet, type Stats as StatsType, type ResponseEntry, type TrainingEntry } from "../lib/api";
 import { LoadingState } from "../components/LoadingState";
 import { ErrorState } from "../components/ErrorState";
+import { EmptyState } from "../components/EmptyState";
 import { SubjectBarChart } from "../components/SubjectBarChart";
 import { ErrorTypePie } from "../components/ErrorTypePie";
 import { ScoreLineChart } from "../components/ScoreLineChart";
@@ -167,6 +168,20 @@ export function Stats() {
         <ErrorState message={`Failed to load statistics: ${error}`} onRetry={load} />
       </div>
     );
+
+  // Empty state: no probes run yet
+  if (responses.length === 0 && trainingEntries.length === 0) {
+    return (
+      <div style={{ padding: 24, height: "100%", overflowY: "auto" }}>
+        <h1 style={{ fontSize: 24, marginBottom: 20, color: "var(--accent)" }}>Statistics Dashboard</h1>
+        <EmptyState
+          icon="📊"
+          title="No statistics yet"
+          message="Run a probe to start collecting data. Statistics and charts will appear here."
+        />
+      </div>
+    );
+  }
 
   const s = stats || ({} as StatsType);
 

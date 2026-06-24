@@ -11,10 +11,10 @@ export const theme = {
   accentSecondary: "#C4DA7D",     // Hermes "lime-100" — yellow-green
   textPrimary: "#FFF8DC",         // Hermes "banner_text" — cornsilk white
   textSecondary: "#B8860B",       // Hermes "banner_dim" — dark goldenrod
-  textDim: "#544B41",             // Hermes "amber-600" — muted brown
+  textDim: "#918270",             // Lightened for WCAG AA (was #544B41, 2.07:1)
   success: "#C4DA7D",             // Hermes lime-100 — green-ish for correct
   warning: "#FFBF00",             // Hermes "banner_accent" — amber
-  error: "#CD5C5C",               // Indian red — for incorrect
+  error: "#D26464",               // Lightened for WCAG AA (was #CD5C5C, 4.45:1)
   info: "#4DD0E1",                // Hermes "ui_label" — cyan
   border: "#CD7F32",              // Hermes bronze — panel borders
 } as const;

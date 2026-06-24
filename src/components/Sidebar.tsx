@@ -1,3 +1,4 @@
+import { memo } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { Caduceus } from "./Caduceus";
 import type { Screen } from "../lib/theme";
@@ -20,7 +21,7 @@ const NAV_ITEMS: { id: Screen; label: string; icon: string }[] = [
  * @param model - Optional selected model name (shown in footer).
  * @param phase - Optional current pipeline phase (shown in footer).
  */
-export function Sidebar({
+export const Sidebar = memo(function Sidebar({
   active,
   onSelect,
   model,
@@ -103,4 +104,4 @@ export function Sidebar({
       </div>
     </nav>
   );
-}
+});

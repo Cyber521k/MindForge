@@ -1,3 +1,4 @@
+import { memo } from "react";
 import { motion } from "framer-motion";
 
 /**
@@ -6,7 +7,7 @@ import { motion } from "framer-motion";
  * @param label - Optional label displayed below the percentage.
  * @param size - Diameter in pixels (default 120).
  */
-export function ProgressRing({ value, label, size = 120 }: { value: number; label?: string; size?: number }) {
+export const ProgressRing = memo(function ProgressRing({ value, label, size = 120 }: { value: number; label?: string; size?: number }) {
   const pct = Math.min(100, Math.max(0, value));
   return (
     <div style={{ width: size, height: size, position: "relative", display: "flex", alignItems: "center", justifyContent: "center" }}>
@@ -27,4 +28,4 @@ export function ProgressRing({ value, label, size = 120 }: { value: number; labe
       </div>
     </div>
   );
-}
+});

@@ -4,7 +4,7 @@ import { apiGet, type HardwareInfo, type ModelEntry, type ModelListResponse } fr
 import { LoadingState } from "../components/LoadingState";
 import { ErrorState } from "../components/ErrorState";
 
-export function ModelSetup({ onContinue }: { onContinue?: () => void }) {
+export function ModelSetup({ onContinue, onSelectModel }: { onContinue?: () => void; onSelectModel?: (model: string) => void }) {
   const [hw, setHw] = useState<HardwareInfo | null>(null);
   const [models, setModels] = useState<ModelEntry[]>([]);
   const [cloudModels, setCloudModels] = useState<ModelEntry[]>([]);
@@ -15,13 +15,12 @@ export function ModelSetup({ onContinue }: { onContinue?: () => void }) {
   const load = useCallback(() => {
     setLoading(true);
     setError(null);
-    apiGet<HardwareInfo>("/api/hardware")
-      .then((h) => {
+    Promise.all([
+      apiGet<HardwareInfo>("/api/hardware"),
+      apiGet<ModelListResponse>("/api/models"),
+    ])
+      .then(([h, m]) => {
         setHw(h);
-        return apiGet<ModelListResponse>("/api/models");
-      })
-      .then((m) => {
-        // API returns local_models/cloud_models, not local/cloud
         setModels(m.local || m.local_models || []);
         setCloudModels(m.cloud || m.cloud_models || []);
         setLoading(false);
@@ -98,11 +97,12 @@ export function ModelSetup({ onContinue }: { onContinue?: () => void }) {
               aria-label={`Select model ${m.name}`}
               aria-pressed={selected === repo}
               whileHover={canRun ? { scale: 1.01 } : {}}
-              onClick={() => canRun && setSelected(repo)}
+              onClick={() => { if (canRun) { setSelected(repo); onSelectModel?.(repo); } }}
               onKeyDown={(e) => {
                 if (canRun && (e.key === "Enter" || e.key === " ")) {
                   e.preventDefault();
                   setSelected(repo);
+                  onSelectModel?.(repo);
                 }
               }}
               style={{
@@ -151,11 +151,12 @@ export function ModelSetup({ onContinue }: { onContinue?: () => void }) {
               tabIndex={0}
               aria-label={`Select model ${m.name}`}
               aria-pressed={selected === m.repo}
-              onClick={() => setSelected(m.repo)}
+              onClick={() => { setSelected(m.repo); onSelectModel?.(m.repo); }}
               onKeyDown={(e) => {
                 if (e.key === "Enter" || e.key === " ") {
                   e.preventDefault();
                   setSelected(m.repo);
+                  onSelectModel?.(m.repo);
                 }
               }}
               style={{

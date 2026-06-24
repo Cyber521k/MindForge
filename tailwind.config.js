@@ -17,7 +17,7 @@ export default {
           "text-secondary": "#B8860B",
           success: "#C4DA7D",
           warning: "#FFBF00",
-          error: "#CD5C5C",
+          error: "#D26464",
           info: "#4DD0E1",
           border: "#CD7F32",
         },

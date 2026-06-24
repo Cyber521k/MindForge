@@ -23,7 +23,19 @@ class Database:
             db_path = os.path.join(os.path.dirname(__file__), "..", "..", "data", "mindforge.db")
         self.db_path = os.path.abspath(db_path)
 
-        os.makedirs(os.path.dirname(self.db_path), exist_ok=True)
+        # Try to create the data directory; tolerate read-only filesystems
+        # (sqlite3.connect will still fail with a clearer error if the dir
+        # truly doesn't exist, but at least we won't crash with OSError
+        # before giving a useful message).
+        data_dir = os.path.dirname(self.db_path)
+        try:
+            os.makedirs(data_dir, exist_ok=True)
+        except OSError as e:
+            logger.warning(
+                "Could not create data directory %s: %s. "
+                "Database operations may fail if the file cannot be created.",
+                data_dir, e,
+            )
 
         self.conn = sqlite3.connect(self.db_path)
         self.conn.row_factory = sqlite3.Row

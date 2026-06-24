@@ -81,7 +81,10 @@ class ProbeEngine:
 
         # Database
         db_path = os.path.join(_project_root, "data", "mindforge.db")
-        os.makedirs(os.path.dirname(db_path), exist_ok=True)
+        try:
+            os.makedirs(os.path.dirname(db_path), exist_ok=True)
+        except OSError:
+            pass  # Database() will handle/log this
         self.db = Database(db_path)
 
     def run(self):
@@ -255,6 +258,17 @@ class ProbeEngine:
                             logger.warning(f"Tier 3 edge case failed: {e}")
                     # Clear so we don't re-run for every question
                     del self._tier3_questions
+
+        # Detect total failure: all questions were skipped due to model errors
+        if len(results) == 0 and len(questions) > 0:
+            print("\nERROR: All model calls failed. No results to process.")
+            self.adapter.close()
+            self.db.close()
+            return {
+                "error": "All model calls failed. Check the model name and ensure mlx-lm is installed.",
+                "total": 0,
+                "dpo_entries": 0,
+            }
 
         # Commit all responses at once
         self.db.conn.commit()

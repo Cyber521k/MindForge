@@ -4,6 +4,7 @@ import { apiGet, apiPost, type TrainingEntry } from "../lib/api";
 import { ConfidenceBadge } from "../components/ConfidenceBadge";
 import { LoadingState } from "../components/LoadingState";
 import { ErrorState } from "../components/ErrorState";
+import { EmptyState } from "../components/EmptyState";
 
 export function ReviewDashboard({ onFormat }: { onFormat?: () => void }) {
   const [entries, setEntries] = useState<TrainingEntry[]>([]);
@@ -49,6 +50,14 @@ export function ReviewDashboard({ onFormat }: { onFormat?: () => void }) {
       setActionError(err?.message || String(err));
       return; // Don't advance on error
     }
+    // Optimistically update the entry's status in local state
+    const newStatus = action === "accept" ? "accepted"
+      : action === "reject" ? "rejected"
+      : action === "edit" ? "edited"
+      : "pending"; // skip stays pending
+    setEntries((prev) => prev.map((e, i) =>
+      i === idx ? { ...e, status: newStatus, ...(action === "edit" ? { chosen: editedChosen, rejected: editedRejected } : {}) } : e
+    ));
     setSessionStats((s) => ({
       ...s,
       reviewed: s.reviewed + 1,
@@ -57,7 +66,6 @@ export function ReviewDashboard({ onFormat }: { onFormat?: () => void }) {
     }));
     setEditMode(false);
     setIdx(Math.min(idx + 1, entries.length));
-    load();
   };
 
   // Navigate prev/next without acting
@@ -171,6 +179,20 @@ export function ReviewDashboard({ onFormat }: { onFormat?: () => void }) {
 
   const entry = entries[idx];
   const remaining = entries.length - idx;
+
+  // Empty state: queue loaded but no entries
+  if (entries.length === 0) {
+    return (
+      <div style={{ padding: 24, height: "100%", overflowY: "auto" }}>
+        <h1 style={{ fontSize: 24, marginBottom: 20, color: "var(--accent)" }}>Review Dashboard</h1>
+        <EmptyState
+          icon="📋"
+          title="Review queue is empty"
+          message="Run a probe to generate training entries that need review."
+        />
+      </div>
+    );
+  }
 
   return (
     <div style={{ padding: 24, height: "100%", overflowY: "auto" }}>

@@ -2,6 +2,29 @@
 
 All notable changes to MindForge are documented in this file.
 
+## [7.0.1] - 2026-06-24 (Round 2)
+
+### Added
+
+- **Ollama adapter**: `OllamaAdapter` in adapters.py for local Ollama models (ollama/ prefix, strips prefix before API call)
+- **Ollama detector**: `mindforge/hardware/ollama_detector.py` — 3-tier detection (HTTP probe, pgrep, which)
+- **Edge-case test suite**: `tests/test_edge_cases.py` — 89 tests covering error handling, boundary conditions, invalid inputs
+- **WebSocket hook improvements**: reconnection with max retries, jitter, unmount guard
+
+### Fixed
+
+- Frontend: useMemo for screen elements (prevents re-instantiation on every render)
+- FastAPI: blocking I/O wrapped in asyncio.to_thread() for 6 endpoints
+- Database: added 6 indexes + WAL journal mode for query performance
+- WebSocket: max reconnect attempts (20), jitter, unmount guard
+
+### Changed
+
+- Test count: 415 -> 504 (89 new edge-case tests)
+- Test files: 10 -> 11 (added test_edge_cases.py)
+- detect command: now shows Ollama models when running
+- models command: now lists Ollama models with usage hint
+
 ## [7.0.0] - 2026-06-24
 
 ### Added
@@ -24,10 +47,10 @@ All notable changes to MindForge are documented in this file.
 - **6 output formats**: DPO, Alpaca, ChatML, completion, openai_messages, template_free
 - **PDF and web ingestion** with prompt injection sanitization
 - **Pluggable model adapters**: MLX, OpenAI, OpenRouter, Exo cluster, Ollama
-- **Hardware auto-detection**: Apple Silicon chip, memory, API keys, exo cluster
+- **Hardware auto-detection**: Apple Silicon chip, memory, API keys, exo cluster, Ollama
 - **SQLite vault** for responses, training entries, review sessions, sources
 - **CI/CD** via GitHub Actions (Python tests on macOS, frontend build on Ubuntu)
-- **415 tests**: 8 phase test files, functional tests, E2E tests (TestClient + WebSocket)
+- **504 tests**: 8 phase test files (280), functional tests (98), E2E tests (37), edge-case tests (89)
 - **Hermes skill** at ~/.hermes/skills/mlops/mindforge/
 
 ### Fixed

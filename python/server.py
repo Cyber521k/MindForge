@@ -86,6 +86,13 @@ app.add_middleware(
 _jobs: dict = {}
 
 
+# ---------------------------------------------------------------------------
+# Hardware cache (avoid running sysctl subprocesses on every /api/hardware call)
+# ---------------------------------------------------------------------------
+
+_hardware_cache: dict | None = None
+
+
 def public_job(job: dict) -> dict:
     """Return a JSON-serializable view of a job."""
     return {
@@ -263,11 +270,15 @@ class IngestWebRequest(BaseModel):
 
 @app.get("/api/hardware")
 async def get_hardware():
-    """Hardware detection — wraps mindforge.hardware.detector."""
+    """Hardware detection — wraps mindforge.hardware.detector (cached per session)."""
+    global _hardware_cache
+    if _hardware_cache is not None:
+        return _hardware_cache
     try:
         from mindforge.hardware.detector import detect_hardware
 
-        return detect_hardware()
+        _hardware_cache = detect_hardware()
+        return _hardware_cache
     except Exception as e:
         logger.error(f"Hardware detection failed: {e}")
         raise HTTPException(status_code=500, detail=f"Hardware detection failed: {e}")
@@ -877,11 +888,14 @@ async def get_stats():
                 accuracy[domain].append(row[1])
             accuracy = {k: sum(v) / len(v) for k, v in accuracy.items()}
 
+            cursor.execute("SELECT COUNT(*) FROM training_runs")
+            training_runs = cursor.fetchone()[0]
+
             return {
                 "total_questions": total_q,
                 "training_pairs": training_pairs,
                 "subjects": subjects,
-                "training_runs": 0,
+                "training_runs": training_runs,
                 "accuracy": accuracy,
             }
         finally:
@@ -926,19 +940,42 @@ async def cancel_job_api(job_id: str):
 
 @app.websocket("/ws")
 async def websocket_endpoint(ws: WebSocket):
-    """WebSocket endpoint — broadcasts progress updates to connected clients."""
+    """WebSocket endpoint — broadcasts progress updates to connected clients.
+
+    Features:
+    - On connect: sends current job statuses for reconnection recovery
+    - Heartbeat: sends {type: 'heartbeat'} every 30 seconds
+    - Error boundary: if any send fails, the connection is cleaned up gracefully
+    - Clean disconnect: heartbeat cancelled, WS removed from _ws_clients, closed
+    """
     await ws.accept()
     _ws_clients.append(ws)
-    await ws.send_json({
-        "type": "job_statuses",
-        "jobs": {job_id: public_job(job) for job_id, job in _jobs.items()},
-    })
+
+    # Send current job statuses on connect (for reconnection recovery)
+    try:
+        await ws.send_json({
+            "type": "job_statuses",
+            "jobs": {job_id: public_job(job) for job_id, job in _jobs.items()},
+        })
+    except Exception:
+        # Client disconnected immediately after connect — clean up
+        if ws in _ws_clients:
+            _ws_clients.remove(ws)
+        try:
+            await ws.close()
+        except Exception:
+            pass
+        return
 
     async def heartbeat():
         """Send periodic WebSocket heartbeats every 30 seconds to keep the connection alive."""
         while True:
             await asyncio.sleep(30)
-            await ws.send_json({"type": "heartbeat", "timestamp": time.time()})
+            try:
+                await ws.send_json({"type": "heartbeat", "timestamp": time.time()})
+            except Exception:
+                # Connection lost — stop heartbeating
+                break
 
     heartbeat_task = asyncio.create_task(heartbeat())
     try:
@@ -956,6 +993,8 @@ async def websocket_endpoint(ws: WebSocket):
                     pass
     except WebSocketDisconnect:
         pass
+    except Exception as e:
+        logger.warning(f"WebSocket error: {e}")
     finally:
         heartbeat_task.cancel()
         with suppress(asyncio.CancelledError):

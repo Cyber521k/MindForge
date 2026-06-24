@@ -546,6 +546,15 @@ def cmd_ingest_web(args):
     all_dpo_entries = []
     total_flags = 0
 
+    # Open a single DB connection for all pages (avoid per-page connection churn)
+    import hashlib
+    db_path = os.path.join(_project_root, "data", "mindforge.db")
+    db = None
+    try:
+        db = Database(db_path)
+    except Exception as e:
+        logging.warning(f"Failed to open database for web sources: {e}")
+
     for i, page in enumerate(pages):
         content = page.get("content", "")
         if not content:
@@ -570,26 +579,27 @@ def cmd_ingest_web(args):
             qa_list = generate_qa_from_chunk(chunk, subject=None, adapter=None)
             all_qa_pairs.extend(qa_list)
 
-        # Store web source in database
-        try:
-            db_path = os.path.join(_project_root, "data", "mindforge.db")
-            db = Database(db_path)
-            import hashlib
-            content_hash = hashlib.sha256(clean_text.encode()).hexdigest()
-            db.store_web_source({
-                "url": page.get("url", args.url),
-                "page_title": page.get("title", ""),
-                "content_hash": content_hash,
-                "word_count": len(clean_text.split()),
-                "extraction_method": page.get("method_used", "beautifulsoup"),
-                "sanitization_status": "flagged" if san["flags"] else "clean",
-                "injection_flags": json.dumps(san["flags"]) if san["flags"] else None,
-                "crawl_mode": "site" if args.crawl else "single",
-                "crawl_depth": page.get("depth", 0),
-            })
-            db.close()
-        except Exception as e:
-            logging.warning(f"Failed to store web source: {e}")
+        # Store web source in database (using the single connection)
+        if db is not None:
+            try:
+                content_hash = hashlib.sha256(clean_text.encode()).hexdigest()
+                db.store_web_source({
+                    "url": page.get("url", args.url),
+                    "page_title": page.get("title", ""),
+                    "content_hash": content_hash,
+                    "word_count": len(clean_text.split()),
+                    "extraction_method": page.get("method_used", "beautifulsoup"),
+                    "sanitization_status": "flagged" if san["flags"] else "clean",
+                    "injection_flags": json.dumps(san["flags"]) if san["flags"] else None,
+                    "crawl_mode": "site" if args.crawl else "single",
+                    "crawl_depth": page.get("depth", 0),
+                })
+            except Exception as e:
+                logging.warning(f"Failed to store web source: {e}")
+
+    # Close the single DB connection
+    if db is not None:
+        db.close()
 
     print(f"\n  Total Q&A pairs: {len(all_qa_pairs)}")
     print(f"  Total injection flags: {total_flags}")

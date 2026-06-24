@@ -2544,8 +2544,8 @@ The app has a main dashboard layout with a sidebar navigation (left) and content
 │  └──────────────────────────────────────────────────────┘        │
 │                                                                 │
 │  ┌─ DATA PATHS ────────────────────────────────────────┐        │
-│  │  Data directory:  ~/mindforge-data/                  │        │
-│  │  Output directory: ~/mindforge-data/training-data/  │        │
+│  │  Data directory:  data/                              │        │
+│  │  Output directory: data/training-data/                │        │
 │  │  MLX model cache: ~/.cache/huggingface/              │        │
 │  └──────────────────────────────────────────────────────┘        │
 │                                                                 │

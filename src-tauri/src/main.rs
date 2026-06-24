@@ -2,6 +2,8 @@
 // Provides IPC commands for Python FastAPI sidecar lifecycle management.
 #![cfg_attr(not(debug_assertions), windows_subsystem = "windows")]
 
+use std::env;
+use std::path::PathBuf;
 use std::process::{Child, Command};
 use std::sync::Mutex;
 
@@ -17,6 +19,61 @@ impl Default for SidecarState {
             child: Mutex::new(None),
         }
     }
+}
+
+/// Resolve the path to `python/server.py` robustly.
+///
+/// Search order:
+/// 1. Relative to CWD (works in dev mode when run from project root)
+/// 2. Relative to the directory containing the current executable
+///    (works for bare binaries in target/release/)
+/// 3. Relative to the parent of the executable's directory
+///    (works inside .app bundles: Contents/MacOS/ -> Contents/ -> .app root -> project root)
+///
+/// Returns the resolved path if found, or an error listing attempted paths.
+fn resolve_sidecar_path() -> Result<PathBuf, String> {
+    let relative = PathBuf::from("python/server.py");
+
+    // 1. CWD (dev mode)
+    if relative.exists() {
+        return Ok(relative);
+    }
+
+    let mut attempted = vec![relative.display().to_string()];
+
+    // 2. Relative to executable directory
+    if let Ok(exe) = env::current_exe() {
+        if let Some(exe_dir) = exe.parent() {
+            let candidate = exe_dir.join("python/server.py");
+            if candidate.exists() {
+                return Ok(candidate);
+            }
+            attempted.push(candidate.display().to_string());
+
+            // 3. Relative to parent of executable directory
+            if let Some(exe_parent) = exe_dir.parent() {
+                let candidate2 = exe_parent.join("python/server.py");
+                if candidate2.exists() {
+                    return Ok(candidate2);
+                }
+                attempted.push(candidate2.display().to_string());
+
+                // 4. One more level up (inside .app bundle: MacOS -> Contents -> app -> project root)
+                if let Some(exe_grandparent) = exe_parent.parent() {
+                    let candidate3 = exe_grandparent.join("python/server.py");
+                    if candidate3.exists() {
+                        return Ok(candidate3);
+                    }
+                    attempted.push(candidate3.display().to_string());
+                }
+            }
+        }
+    }
+
+    Err(format!(
+        "Could not find python/server.py. Attempted paths:\n  {}",
+        attempted.join("\n  ")
+    ))
 }
 
 /// Launch the Python FastAPI sidecar process.
@@ -41,9 +98,12 @@ fn start_sidecar(state: tauri::State<'_, SidecarState>) -> Result<String, String
         }
     }
 
+    // Resolve the sidecar script path robustly
+    let server_path = resolve_sidecar_path()?;
+
     // Spawn the Python FastAPI sidecar
     let child = Command::new("python3")
-        .arg("python/server.py")
+        .arg(&server_path)
         .spawn()
         .map_err(|e| format!("Failed to start sidecar: {}", e))?;
 
@@ -59,7 +119,9 @@ fn stop_sidecar(state: tauri::State<'_, SidecarState>) -> Result<(), String> {
     let mut guard = state.child.lock().map_err(|e| e.to_string())?;
 
     if let Some(mut child) = guard.take() {
-        child.kill().map_err(|e| format!("Failed to kill sidecar: {}", e))?;
+        child
+            .kill()
+            .map_err(|e| format!("Failed to kill sidecar: {}", e))?;
         // Wait to reap the zombie process
         let _ = child.wait();
     }
@@ -76,7 +138,7 @@ fn sidecar_status(state: tauri::State<'_, SidecarState>) -> Result<bool, String>
 
     if let Some(ref mut child) = *guard {
         match child.try_wait() {
-            Ok(None) => Ok(true),  // Still running
+            Ok(None) => Ok(true), // Still running
             Ok(Some(_)) => {
                 // Process has exited -- clean up
                 *guard = None;
