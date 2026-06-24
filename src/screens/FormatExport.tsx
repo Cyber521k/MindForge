@@ -1,6 +1,8 @@
-import { useState, useEffect, useMemo } from "react";
+import { useState, useEffect, useMemo, useCallback } from "react";
 import { motion } from "framer-motion";
 import { apiGet, apiPost, type TrainingEntry } from "../lib/api";
+import { LoadingState } from "../components/LoadingState";
+import { ErrorState } from "../components/ErrorState";
 
 const FORMATS = [
   { id: "dpo", label: "DPO Preference", desc: "prompt / chosen / rejected", default: true },
@@ -16,14 +18,31 @@ export function FormatExport({ onTrain }: { onTrain?: () => void }) {
   const [fmt, setFmt] = useState("dpo");
   const [exported, setExported] = useState(false);
   const [exportResult, setExportResult] = useState<any>(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+  const [exportError, setExportError] = useState<string | null>(null);
+  const [exporting, setExporting] = useState(false);
+
+  const load = useCallback(() => {
+    setLoading(true);
+    setError(null);
+    apiGet<TrainingEntry[]>("/api/training-entries")
+      .then((data) => {
+        setEntries(data);
+        setLoading(false);
+      })
+      .catch((err) => {
+        setError(err?.message || String(err));
+        setLoading(false);
+      });
+  }, []);
 
   useEffect(() => {
-    apiGet<TrainingEntry[]>("/api/training-entries").then(setEntries).catch(() => {});
-  }, []);
+    load();
+  }, [load]);
 
   const accepted = useMemo(() => entries.filter((e) => e.status === "accepted" || e.status === "edited"), [entries]);
   const rejected = useMemo(() => entries.filter((e) => e.status === "rejected"), [entries]);
-  const pending = useMemo(() => entries.filter((e) => e.status === "pending"), [entries]);
 
   const previewData = useMemo(() => {
     return accepted.slice(0, 5).map((e) => {
@@ -37,6 +56,8 @@ export function FormatExport({ onTrain }: { onTrain?: () => void }) {
   }, [accepted, fmt]);
 
   const doExport = async () => {
+    setExporting(true);
+    setExportError(null);
     try {
       const result = await apiPost("/api/format", {
         input: "data/mindforge.db",
@@ -45,8 +66,23 @@ export function FormatExport({ onTrain }: { onTrain?: () => void }) {
       });
       setExported(true);
       setExportResult(result);
-    } catch {}
+    } catch (err: any) {
+      setExportError(err?.message || String(err));
+    } finally {
+      setExporting(false);
+    }
   };
+
+  if (loading)
+    return <LoadingState message="Loading training entries..." />;
+
+  if (error)
+    return (
+      <div style={{ padding: 24 }}>
+        <h1 style={{ fontSize: 24, marginBottom: 20, color: "var(--accent)" }}>Format & Export</h1>
+        <ErrorState message={`Failed to load training entries: ${error}`} onRetry={load} />
+      </div>
+    );
 
   return (
     <div style={{ padding: 24, height: "100%", overflowY: "auto" }}>
@@ -117,8 +153,15 @@ export function FormatExport({ onTrain }: { onTrain?: () => void }) {
         </div>
       </div>
 
+      {/* Export Error */}
+      {exportError && (
+        <div className="panel" style={{ padding: 12, marginBottom: 16, borderLeft: "3px solid var(--error)" }}>
+          <span style={{ color: "var(--error)", fontSize: 14, fontWeight: 600 }}>✗ Export failed: {exportError}</span>
+        </div>
+      )}
+
       {/* Export Result */}
-      {exported && exportResult && (
+      {exported && exportResult && !exportError && (
         <motion.div
           initial={{ opacity: 0, y: 10 }}
           animate={{ opacity: 1, y: 0 }}
@@ -134,10 +177,10 @@ export function FormatExport({ onTrain }: { onTrain?: () => void }) {
 
       {/* Actions */}
       <div style={{ display: "flex", gap: 12 }}>
-        <button className="btn-gold gold-glow" onClick={doExport} style={{ flex: 1, padding: 12, fontSize: 16 }}>
-          ► Export Training Data
+        <button className="btn-gold gold-glow" onClick={doExport} disabled={exporting} style={{ flex: 1, padding: 12, fontSize: 16, opacity: exporting ? 0.5 : 1 }}>
+          {exporting ? "⏳ Exporting..." : "► Export Training Data"}
         </button>
-        {exported && (
+        {exported && !exportError && (
           <button className="btn-gold" onClick={onTrain} style={{ flex: 1, padding: 12, fontSize: 16, background: "var(--accent-secondary)", color: "var(--bg)" }}>
             ► Continue to Train & Evaluate
           </button>

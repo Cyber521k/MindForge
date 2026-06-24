@@ -1,6 +1,8 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { motion } from "framer-motion";
 import { apiGet, type HardwareInfo, type ModelEntry, type ModelListResponse } from "../lib/api";
+import { LoadingState } from "../components/LoadingState";
+import { ErrorState } from "../components/ErrorState";
 
 export function ModelSetup({ onContinue }: { onContinue?: () => void }) {
   const [hw, setHw] = useState<HardwareInfo | null>(null);
@@ -8,24 +10,39 @@ export function ModelSetup({ onContinue }: { onContinue?: () => void }) {
   const [cloudModels, setCloudModels] = useState<ModelEntry[]>([]);
   const [selected, setSelected] = useState<string>("");
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
 
-  useEffect(() => {
-    Promise.all([apiGet<ModelListResponse>("/api/hardware"), apiGet<ModelListResponse>("/api/models")])
-      .then(([h, m]) => {
+  const load = useCallback(() => {
+    setLoading(true);
+    setError(null);
+    apiGet<HardwareInfo>("/api/hardware")
+      .then((h) => {
         setHw(h);
+        return apiGet<ModelListResponse>("/api/models");
+      })
+      .then((m) => {
         setModels(m.local || []);
         setCloudModels(m.cloud || []);
         setLoading(false);
       })
-      .catch(() => setLoading(false));
+      .catch((err) => {
+        setError(err?.message || String(err));
+        setLoading(false);
+      });
   }, []);
 
+  useEffect(() => {
+    load();
+  }, [load]);
+
   if (loading)
+    return <LoadingState message="⚕ Detecting hardware..." />;
+
+  if (error)
     return (
-      <div style={{ padding: 40, color: "var(--text-secondary)", fontSize: 16 }}>
-        <motion.div animate={{ opacity: [0.4, 1, 0.4] }} transition={{ duration: 1.5, repeat: Infinity }}>
-          ⚕ Detecting hardware...
-        </motion.div>
+      <div style={{ padding: 24 }}>
+        <h1 style={{ fontSize: 24, marginBottom: 20, color: "var(--accent)" }}>Model Setup</h1>
+        <ErrorState message={`Failed to load hardware/models: ${error}`} onRetry={load} />
       </div>
     );
 

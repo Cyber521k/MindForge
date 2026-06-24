@@ -30,6 +30,9 @@ export function TrainEvaluate() {
   const [lossHistory, setLossHistory] = useState<LossPoint[]>([]);
   const [evalResult, setEvalResult] = useState<EvalResult | null>(null);
   const [jobId, setJobId] = useState("");
+  const [trainError, setTrainError] = useState<string | null>(null);
+  const [evalError, setEvalError] = useState<string | null>(null);
+  const [evaluating, setEvaluating] = useState(false);
   const { latest } = useWebSocket();
 
   // WebSocket updates
@@ -48,6 +51,7 @@ export function TrainEvaluate() {
     }
     if (latest.type === "job_failed" && latest.job_id === jobId) {
       setRunning(false);
+      setTrainError(latest.error || "Training job failed");
     }
   }, [latest, jobId, iters, currentIter]);
 
@@ -56,19 +60,27 @@ export function TrainEvaluate() {
     setCurrentIter(0);
     setLossHistory([]);
     setEvalResult(null);
+    setTrainError(null);
     try {
       const res = await apiPost("/api/train", { model, data, mode, iters, batch_size: batchSize, learning_rate: learningRate, beta });
       setJobId(res.job_id);
-    } catch {
+    } catch (err: any) {
       setRunning(false);
+      setTrainError(err?.message || String(err));
     }
   };
 
   const startEval = async () => {
+    setEvaluating(true);
+    setEvalError(null);
     try {
       const res = await apiPost("/api/evaluate", { model, tasks: "mmlu_stem", num_fewshot: 5 });
       setEvalResult(res);
-    } catch {}
+    } catch (err: any) {
+      setEvalError(err?.message || String(err));
+    } finally {
+      setEvaluating(false);
+    }
   };
 
   const pct = iters > 0 ? (currentIter / iters) * 100 : 0;
@@ -82,6 +94,19 @@ export function TrainEvaluate() {
   return (
     <div style={{ padding: 24, height: "100%", overflowY: "auto" }}>
       <h1 style={{ fontSize: 24, marginBottom: 20, color: "var(--accent)" }}>Train & Evaluate</h1>
+
+      {/* Training Error */}
+      {trainError && (
+        <div className="panel" style={{ padding: 12, marginBottom: 16, borderLeft: "3px solid var(--error)" }}>
+          <span style={{ color: "var(--error)", fontSize: 14, fontWeight: 600 }}>✗ Training failed: {trainError}</span>
+          <button
+            onClick={() => { setTrainError(null); startTrain(); }}
+            style={{ marginLeft: 12, padding: "4px 12px", fontSize: 12, background: "var(--surface-raised)", color: "var(--text)", border: "1px solid var(--border)", borderRadius: 4, cursor: "pointer" }}
+          >
+            ↻ Retry
+          </button>
+        </div>
+      )}
 
       {/* Base Model Selection */}
       <div className="panel" style={{ padding: 20, marginBottom: 20 }}>
@@ -190,10 +215,15 @@ export function TrainEvaluate() {
       {/* Evaluation */}
       <div className="panel" style={{ padding: 20 }}>
         <h3 style={{ marginBottom: 12, fontSize: 14, color: "var(--accent-secondary)", textTransform: "uppercase", letterSpacing: 1 }}>Evaluation</h3>
-        <button className="btn-gold" onClick={startEval} style={{ padding: "8px 20px", marginBottom: 12, fontSize: 14 }}>
-          ► Run Evaluation
+        <button className="btn-gold" onClick={startEval} disabled={evaluating} style={{ padding: "8px 20px", marginBottom: 12, fontSize: 14, opacity: evaluating ? 0.5 : 1 }}>
+          {evaluating ? "⏳ Evaluating..." : "► Run Evaluation"}
         </button>
-        {evalResult && (
+        {evalError && (
+          <div style={{ padding: 10, marginBottom: 12, borderLeft: "3px solid var(--error)", color: "var(--error)", fontSize: 13, fontWeight: 600 }}>
+            ✗ Evaluation failed: {evalError}
+          </div>
+        )}
+        {evalResult && !evalError && (
           <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }}>
             <table style={{ width: "100%", fontSize: 13, borderCollapse: "collapse" }}>
               <thead>

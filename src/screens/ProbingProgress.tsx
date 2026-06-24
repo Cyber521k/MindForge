@@ -1,8 +1,10 @@
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect, useRef, useCallback } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { apiPost, apiGet } from "../lib/api";
 import { useWebSocket } from "../hooks/useWebSocket";
 import { ProgressRing } from "../components/ProgressRing";
+import { LoadingState } from "../components/LoadingState";
+import { ErrorState } from "../components/ErrorState";
 
 interface ResultItem {
   subject: string;
@@ -22,6 +24,7 @@ export function ProbingProgress({ onReview }: { onReview?: () => void }) {
   const [currentQ, setCurrentQ] = useState<string>("");
   const [currentA, setCurrentA] = useState<string>("");
   const [jobId, setJobId] = useState<string>("");
+  const [error, setError] = useState<string | null>(null);
   const { connected, messages, latest } = useWebSocket();
   const pollRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
@@ -52,6 +55,7 @@ export function ProbingProgress({ onReview }: { onReview?: () => void }) {
     }
     if (latest.type === "job_failed" && latest.job_id === jobId) {
       setRunning(false);
+      setError(latest.error || "Probe job failed");
       if (pollRef.current) clearInterval(pollRef.current);
     }
   }, [latest, jobId, subject]);
@@ -68,9 +72,12 @@ export function ProbingProgress({ onReview }: { onReview?: () => void }) {
           if (pollRef.current) clearInterval(pollRef.current);
         } else if (status.status === "failed") {
           setRunning(false);
+          setError(status.error || "Probe job failed");
           if (pollRef.current) clearInterval(pollRef.current);
         }
-      } catch {}
+      } catch (err: any) {
+        // Don't set error on poll failure — might be transient
+      }
     }, 3000);
     return () => {
       if (pollRef.current) clearInterval(pollRef.current);
@@ -83,11 +90,13 @@ export function ProbingProgress({ onReview }: { onReview?: () => void }) {
     setProgress(0);
     setResults({ correct: 0, incorrect: 0, total: 0 });
     setRecentResults([]);
+    setError(null);
     try {
       const res = await apiPost("/api/probe", { model, subject, tier: "1", limit: 25 });
       setJobId(res.job_id);
-    } catch {
+    } catch (err: any) {
       setRunning(false);
+      setError(err?.message || String(err));
     }
   };
 
@@ -100,6 +109,19 @@ export function ProbingProgress({ onReview }: { onReview?: () => void }) {
   return (
     <div style={{ padding: 24, height: "100%", overflowY: "auto" }}>
       <h1 style={{ fontSize: 24, marginBottom: 20, color: "var(--accent)" }}>Probing Engine — Live</h1>
+
+      {/* Error display */}
+      {error && (
+        <div className="panel" style={{ padding: 12, marginBottom: 16, borderLeft: "3px solid var(--error)" }}>
+          <span style={{ color: "var(--error)", fontSize: 14, fontWeight: 600 }}>✗ {error}</span>
+          <button
+            onClick={() => { setError(null); start(); }}
+            style={{ marginLeft: 12, padding: "4px 12px", fontSize: 12, background: "var(--surface-raised)", color: "var(--text)", border: "1px solid var(--border)", borderRadius: 4, cursor: "pointer" }}
+          >
+            ↻ Retry
+          </button>
+        </div>
+      )}
 
       {/* Config */}
       <div className="panel" style={{ padding: 20, marginBottom: 20 }}>

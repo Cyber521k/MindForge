@@ -12,6 +12,7 @@ import uuid
 import asyncio
 import threading
 import logging
+from contextlib import asynccontextmanager
 from typing import Optional
 
 # Ensure project root is on sys.path so we can import mindforge
@@ -28,20 +29,12 @@ logging.basicConfig(
 )
 logger = logging.getLogger("mindforge.sidecar")
 
-app = FastAPI(title="MindForge Sidecar", version="7.0.0")
-
-app.add_middleware(
-    CORSMiddleware,
-    allow_origins=["*"],
-    allow_methods=["*"],
-    allow_headers=["*"],
-)
-
 # ---------------------------------------------------------------------------
 # Event loop reference for cross-thread WebSocket broadcasting
 # ---------------------------------------------------------------------------
 
 _main_loop: asyncio.AbstractEventLoop | None = None
+_ws_clients: list[WebSocket] = []
 
 
 def get_loop() -> asyncio.AbstractEventLoop:
@@ -51,10 +44,39 @@ def get_loop() -> asyncio.AbstractEventLoop:
     return _main_loop
 
 
-@app.on_event("startup")
-async def _store_loop():
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    """Lifespan handler — stores the event loop on startup, cleans up on shutdown."""
     global _main_loop
     _main_loop = asyncio.get_running_loop()
+    logger.info("MindForge sidecar starting up")
+    yield
+    # Shutdown: close all WebSocket clients
+    for ws in list(_ws_clients):
+        try:
+            await ws.close()
+        except Exception:
+            pass
+    _ws_clients.clear()
+    logger.info("MindForge sidecar shut down")
+
+
+app = FastAPI(title="MindForge Sidecar", version="7.0.0", lifespan=lifespan)
+
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=[
+        "http://localhost:5173",
+        "http://localhost:1420",
+        "http://localhost:3000",
+        "http://127.0.0.1:5173",
+        "http://127.0.0.1:1420",
+        "http://127.0.0.1:3000",
+        "http://localhost:7878",
+    ],
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
 
 
 # ---------------------------------------------------------------------------
@@ -62,7 +84,6 @@ async def _store_loop():
 # ---------------------------------------------------------------------------
 
 _jobs: dict = {}
-_ws_clients: list[WebSocket] = []
 
 
 async def broadcast(message: dict):
@@ -200,9 +221,13 @@ class IngestWebRequest(BaseModel):
 @app.get("/api/hardware")
 async def get_hardware():
     """Hardware detection — wraps mindforge.hardware.detector."""
-    from mindforge.hardware.detector import detect_hardware
+    try:
+        from mindforge.hardware.detector import detect_hardware
 
-    return detect_hardware()
+        return detect_hardware()
+    except Exception as e:
+        logger.error(f"Hardware detection failed: {e}")
+        raise HTTPException(status_code=500, detail=f"Hardware detection failed: {e}")
 
 
 @app.get("/api/models")
@@ -214,10 +239,17 @@ async def get_models():
         models = get_available_models()
         return models
     except ImportError:
-        from mindforge.hardware.detector import detect_hardware
+        try:
+            from mindforge.hardware.detector import detect_hardware
 
-        hw = detect_hardware()
-        return {"hardware": hw, "local": [], "cloud": []}
+            hw = detect_hardware()
+            return {"hardware": hw, "local": [], "cloud": []}
+        except Exception as e:
+            logger.error(f"Model list fallback failed: {e}")
+            raise HTTPException(status_code=500, detail=f"Model list failed: {e}")
+    except Exception as e:
+        logger.error(f"Model list failed: {e}")
+        raise HTTPException(status_code=500, detail=f"Model list failed: {e}")
 
 
 @app.get("/api/taxonomy")
@@ -226,37 +258,54 @@ async def get_taxonomy():
     import yaml
 
     tax_path = os.path.join(_PROJECT_ROOT, "taxonomy", "subjects.yaml")
-    with open(tax_path, "r") as f:
-        return yaml.safe_load(f)
+    try:
+        with open(tax_path, "r") as f:
+            return yaml.safe_load(f)
+    except FileNotFoundError:
+        raise HTTPException(status_code=404, detail=f"Taxonomy file not found: {tax_path}")
+    except Exception as e:
+        logger.error(f"Taxonomy load failed: {e}")
+        raise HTTPException(status_code=500, detail=f"Taxonomy load failed: {e}")
 
 
 @app.get("/api/responses")
 async def get_responses():
     """Get probe results from the SQLite database."""
-    from mindforge.vault.database import Database
+    try:
+        from mindforge.vault.database import Database
 
-    db = Database(os.path.join(_PROJECT_ROOT, "data", "mindforge.db"))
-    cursor = db.conn.cursor()
-    cursor.execute("SELECT * FROM responses ORDER BY created_at DESC LIMIT 100")
-    rows = [dict(r) for r in cursor.fetchall()]
-    db.close()
-    return rows
+        db = Database(os.path.join(_PROJECT_ROOT, "data", "mindforge.db"))
+        cursor = db.conn.cursor()
+        cursor.execute("SELECT * FROM responses ORDER BY created_at DESC LIMIT 100")
+        rows = [dict(r) for r in cursor.fetchall()]
+        db.close()
+        return rows
+    except Exception as e:
+        logger.error(f"Failed to get responses: {e}")
+        raise HTTPException(status_code=500, detail=f"Failed to get responses: {e}")
 
 
 @app.get("/api/training-entries")
 async def get_training_entries():
     """Get all training entries from the database."""
-    from mindforge.vault.database import Database
+    try:
+        from mindforge.vault.database import Database
 
-    db = Database(os.path.join(_PROJECT_ROOT, "data", "mindforge.db"))
-    entries = db.get_all_training_entries()
-    db.close()
-    return entries
+        db = Database(os.path.join(_PROJECT_ROOT, "data", "mindforge.db"))
+        entries = db.get_all_training_entries()
+        db.close()
+        return entries
+    except Exception as e:
+        logger.error(f"Failed to get training entries: {e}")
+        raise HTTPException(status_code=500, detail=f"Failed to get training entries: {e}")
 
 
 @app.post("/api/probe")
 async def start_probe(req: ProbeRequest):
     """Start a probing job — returns job_id, streams progress via WebSocket."""
+    if not req.model:
+        raise HTTPException(status_code=400, detail="Model is required")
+
     job_id = create_job("probe")
 
     def run_probe():
@@ -292,24 +341,44 @@ async def get_probe_status(job_id: str):
 @app.post("/api/review/{entry_id}")
 async def submit_review(entry_id: int, req: ReviewRequest):
     """Submit a review action (accept / reject / edit / skip)."""
-    from mindforge.vault.database import Database
+    valid_actions = {"accept", "reject", "edit", "skip"}
+    if req.action not in valid_actions:
+        raise HTTPException(
+            status_code=400,
+            detail=f"Invalid action '{req.action}'. Must be one of: {', '.join(sorted(valid_actions))}",
+        )
 
-    db = Database(os.path.join(_PROJECT_ROOT, "data", "mindforge.db"))
+    try:
+        from mindforge.vault.database import Database
 
-    if req.action == "accept":
-        db.update_entry_status(entry_id, "accepted")
-    elif req.action == "reject":
-        db.update_entry_status(entry_id, "rejected")
-    elif req.action == "edit":
-        db.update_training_entry(entry_id, chosen=req.edited_chosen, rejected=req.edited_rejected)
-        db.update_entry_status(entry_id, "edited")
-    elif req.action == "skip":
-        pass  # Leave as pending
+        db = Database(os.path.join(_PROJECT_ROOT, "data", "mindforge.db"))
 
-    db.store_review_session(entry_id, req.action, req.edited_chosen, req.edited_rejected)
-    db.close()
-    emit({"type": "review_action", "entry_id": entry_id, "action": req.action})
-    return {"status": "ok", "action": req.action}
+        # Check entry exists
+        cursor = db.conn.cursor()
+        cursor.execute("SELECT id FROM training_entries WHERE id = ?", (entry_id,))
+        if cursor.fetchone() is None:
+            db.close()
+            raise HTTPException(status_code=404, detail=f"Training entry {entry_id} not found")
+
+        if req.action == "accept":
+            db.update_entry_status(entry_id, "accepted")
+        elif req.action == "reject":
+            db.update_entry_status(entry_id, "rejected")
+        elif req.action == "edit":
+            db.update_training_entry(entry_id, chosen=req.edited_chosen, rejected=req.edited_rejected)
+            db.update_entry_status(entry_id, "edited")
+        elif req.action == "skip":
+            pass  # Leave as pending
+
+        db.store_review_session(entry_id, req.action, req.edited_chosen, req.edited_rejected)
+        db.close()
+        emit({"type": "review_action", "entry_id": entry_id, "action": req.action})
+        return {"status": "ok", "action": req.action}
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Review action failed: {e}")
+        raise HTTPException(status_code=500, detail=f"Review action failed: {e}")
 
 
 @app.post("/api/format")
@@ -317,67 +386,81 @@ async def format_data(req: FormatRequest):
     """Format training data into the requested format (DPO default)."""
     import json as _json
 
-    with open(req.input, "r") as f:
-        if req.input.endswith(".jsonl"):
-            entries = [_json.loads(line) for line in f if line.strip()]
+    try:
+        with open(req.input, "r") as f:
+            if req.input.endswith(".jsonl"):
+                entries = [_json.loads(line) for line in f if line.strip()]
+            else:
+                entries = _json.load(f)
+    except FileNotFoundError:
+        raise HTTPException(status_code=404, detail=f"Input file not found: {req.input}")
+    except json.JSONDecodeError as e:
+        raise HTTPException(status_code=400, detail=f"Invalid JSON in input file: {e}")
+
+    try:
+        fmt = req.format
+        if fmt == "dpo":
+            from mindforge.format.dpo import format_dpo_batch, write_dpo_jsonl
+
+            formatted = format_dpo_batch(entries)
+            out = req.output or os.path.join(_PROJECT_ROOT, "data", "training-data", "dpo", "train.jsonl")
+            write_dpo_jsonl(formatted, out)
+        elif fmt == "alpaca":
+            from mindforge.format.alpaca import format_alpaca_batch
+
+            formatted = format_alpaca_batch(entries)
+            out = req.output or "output.json"
+            with open(out, "w") as f:
+                _json.dump(formatted, f, indent=2)
+        elif fmt == "chatml":
+            from mindforge.format.chatml import format_chatml_batch
+
+            formatted = format_chatml_batch(entries)
+            out = req.output or "output.jsonl"
+            with open(out, "w") as f:
+                for e in formatted:
+                    f.write(_json.dumps(e) + "\n")
+        elif fmt == "completion":
+            from mindforge.format.completion import format_completion_batch
+
+            formatted = format_completion_batch(entries)
+            out = req.output or "output.jsonl"
+            with open(out, "w") as f:
+                for e in formatted:
+                    f.write(_json.dumps(e) + "\n")
+        elif fmt == "openai_messages":
+            from mindforge.format.openai_messages import format_openai_messages_batch
+
+            formatted = format_openai_messages_batch(entries)
+            out = req.output or "output.jsonl"
+            with open(out, "w") as f:
+                for e in formatted:
+                    f.write(_json.dumps(e) + "\n")
+        elif fmt == "template_free":
+            from mindforge.format.template_free import format_template_free_batch
+
+            formatted = format_template_free_batch(entries)
+            out = req.output or "output.jsonl"
+            with open(out, "w") as f:
+                for e in formatted:
+                    f.write(_json.dumps(e) + "\n")
         else:
-            entries = _json.load(f)
+            raise HTTPException(status_code=400, detail=f"Unknown format: {fmt}")
 
-    fmt = req.format
-    if fmt == "dpo":
-        from mindforge.format.dpo import format_dpo_batch, write_dpo_jsonl
-
-        formatted = format_dpo_batch(entries)
-        out = req.output or os.path.join(_PROJECT_ROOT, "data", "training-data", "dpo", "train.jsonl")
-        write_dpo_jsonl(formatted, out)
-    elif fmt == "alpaca":
-        from mindforge.format.alpaca import format_alpaca_batch
-
-        formatted = format_alpaca_batch(entries)
-        out = req.output or "output.json"
-        with open(out, "w") as f:
-            _json.dump(formatted, f, indent=2)
-    elif fmt == "chatml":
-        from mindforge.format.chatml import format_chatml_batch
-
-        formatted = format_chatml_batch(entries)
-        out = req.output or "output.jsonl"
-        with open(out, "w") as f:
-            for e in formatted:
-                f.write(_json.dumps(e) + "\n")
-    elif fmt == "completion":
-        from mindforge.format.completion import format_completion_batch
-
-        formatted = format_completion_batch(entries)
-        out = req.output or "output.jsonl"
-        with open(out, "w") as f:
-            for e in formatted:
-                f.write(_json.dumps(e) + "\n")
-    elif fmt == "openai_messages":
-        from mindforge.format.openai_messages import format_openai_messages_batch
-
-        formatted = format_openai_messages_batch(entries)
-        out = req.output or "output.jsonl"
-        with open(out, "w") as f:
-            for e in formatted:
-                f.write(_json.dumps(e) + "\n")
-    elif fmt == "template_free":
-        from mindforge.format.template_free import format_template_free_batch
-
-        formatted = format_template_free_batch(entries)
-        out = req.output or "output.jsonl"
-        with open(out, "w") as f:
-            for e in formatted:
-                f.write(_json.dumps(e) + "\n")
-    else:
-        raise HTTPException(status_code=400, detail=f"Unknown format: {fmt}")
-
-    return {"status": "ok", "count": len(formatted), "output": out}
+        return {"status": "ok", "count": len(formatted), "output": out}
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Format failed: {e}")
+        raise HTTPException(status_code=500, detail=f"Format failed: {e}")
 
 
 @app.post("/api/convert")
 async def convert_model_api(req: ConvertRequest):
     """Convert a model to MLX format (background job)."""
+    if not req.source:
+        raise HTTPException(status_code=400, detail="Source model is required")
+
     job_id = create_job("convert")
 
     def run():
@@ -399,6 +482,7 @@ async def convert_model_api(req: ConvertRequest):
             finish_job(job_id, result)
         except Exception as e:
             fail_job(job_id, str(e))
+            logger.error(f"Convert job {job_id} failed: {e}")
 
     threading.Thread(target=run, daemon=True).start()
     return {"job_id": job_id, "status": "started"}
@@ -407,6 +491,9 @@ async def convert_model_api(req: ConvertRequest):
 @app.post("/api/quantize")
 async def quantize_model_api(req: QuantizeRequest):
     """Quantize a model (background job)."""
+    if not req.model:
+        raise HTTPException(status_code=400, detail="Model path is required")
+
     job_id = create_job("quantize")
 
     def run():
@@ -419,6 +506,7 @@ async def quantize_model_api(req: QuantizeRequest):
             finish_job(job_id, result)
         except Exception as e:
             fail_job(job_id, str(e))
+            logger.error(f"Quantize job {job_id} failed: {e}")
 
     threading.Thread(target=run, daemon=True).start()
     return {"job_id": job_id, "status": "started"}
@@ -427,6 +515,11 @@ async def quantize_model_api(req: QuantizeRequest):
 @app.post("/api/train")
 async def start_training(req: TrainRequest):
     """Start a training job — streams progress (loss, iteration) via WebSocket."""
+    if not req.model:
+        raise HTTPException(status_code=400, detail="Model is required")
+    if not req.data:
+        raise HTTPException(status_code=400, detail="Data path is required")
+
     job_id = create_job("train")
 
     def run():
@@ -447,6 +540,7 @@ async def start_training(req: TrainRequest):
             finish_job(job_id, result)
         except Exception as e:
             fail_job(job_id, str(e))
+            logger.error(f"Train job {job_id} failed: {e}")
 
     threading.Thread(target=run, daemon=True).start()
     return {"job_id": job_id, "status": "started"}
@@ -455,6 +549,9 @@ async def start_training(req: TrainRequest):
 @app.post("/api/evaluate")
 async def start_evaluation(req: EvaluateRequest):
     """Start an evaluation job — streams progress via WebSocket."""
+    if not req.model:
+        raise HTTPException(status_code=400, detail="Model is required")
+
     job_id = create_job("evaluate")
 
     def run():
@@ -471,6 +568,7 @@ async def start_evaluation(req: EvaluateRequest):
             finish_job(job_id, result)
         except Exception as e:
             fail_job(job_id, str(e))
+            logger.error(f"Evaluate job {job_id} failed: {e}")
 
     threading.Thread(target=run, daemon=True).start()
     return {"job_id": job_id, "status": "started"}
@@ -479,24 +577,67 @@ async def start_evaluation(req: EvaluateRequest):
 @app.post("/api/ingest-pdf")
 async def ingest_pdf(req: IngestPdfRequest):
     """Ingest a PDF — extracts text, generates Q&A pairs, formats as DPO."""
+    if not req.file:
+        raise HTTPException(status_code=400, detail="File path is required")
+
     job_id = create_job("ingest-pdf")
 
     def run():
         try:
             from mindforge.ingest.pdf_extractor import extract_pdf, chunk_text, generate_qa_pairs
-            from mindforge.format.dpo import format_dpo_entry
+            from mindforge.ingest.qa_generator import format_qa_as_dpo
+            from mindforge.vault.database import Database
 
             emit({"type": "ingest_started", "job_id": job_id, "source": req.file})
+
+            if not os.path.exists(req.file):
+                fail_job(job_id, f"File not found: {req.file}")
+                return
+
+            # Step 1: Extract text
             pdf_data = extract_pdf(req.file)
+            emit({"type": "progress", "job_id": job_id, "progress": 25, "stage": "extracted"})
+
+            # Step 2: Chunk text
             chunks = chunk_text(pdf_data["text"])
-            qa_pairs = generate_qa_pairs(chunks, subject=req.subject)
-            dpo_entries = []
-            for qa in qa_pairs:
-                dpo = format_dpo_entry(prompt=qa["question"], chosen=qa["answer"], rejected="")
-                dpo_entries.append(dpo)
-            finish_job(job_id, {"qa_pairs": len(qa_pairs), "dpo_entries": len(dpo_entries)})
+            emit({"type": "progress", "job_id": job_id, "progress": 50, "stage": "chunked", "chunks": len(chunks)})
+
+            # Step 3: Generate Q&A pairs
+            qa_pairs = generate_qa_pairs(chunks, subject=req.subject, adapter=None)
+            emit({"type": "progress", "job_id": job_id, "progress": 75, "stage": "qa_generated", "qa_pairs": len(qa_pairs)})
+
+            # Step 4: Format as DPO and write output
+            dpo_entries = format_qa_as_dpo(qa_pairs)
+            output_dir = os.path.join(_PROJECT_ROOT, "data", "training-data", "dpo")
+            os.makedirs(output_dir, exist_ok=True)
+            output_path = os.path.join(output_dir, "ingest_pdf.jsonl")
+            with open(output_path, "w") as f:
+                for entry in dpo_entries:
+                    f.write(json.dumps(entry) + "\n")
+
+            # Step 5: Store source in database
+            try:
+                db_path = os.path.join(_PROJECT_ROOT, "data", "mindforge.db")
+                db = Database(db_path)
+                db.store_pdf_source({
+                    "filename": pdf_data["metadata"]["filename"],
+                    "file_path": pdf_data["metadata"]["file_path"],
+                    "page_count": pdf_data["metadata"]["page_count"],
+                    "word_count": pdf_data["metadata"]["word_count"],
+                    "content_hash": pdf_data["metadata"]["content_hash"],
+                })
+                db.close()
+            except Exception as db_err:
+                logger.warning(f"Failed to store PDF source in database: {db_err}")
+
+            finish_job(job_id, {
+                "qa_pairs": len(qa_pairs),
+                "dpo_entries": len(dpo_entries),
+                "output_path": output_path,
+            })
         except Exception as e:
             fail_job(job_id, str(e))
+            logger.error(f"PDF ingest job {job_id} failed: {e}")
 
     threading.Thread(target=run, daemon=True).start()
     return {"job_id": job_id, "status": "started"}
@@ -505,30 +646,102 @@ async def ingest_pdf(req: IngestPdfRequest):
 @app.post("/api/ingest-web")
 async def ingest_web(req: IngestWebRequest):
     """Ingest a web URL — extracts content, sanitizes, generates Q&A, formats as DPO."""
+    if not req.url:
+        raise HTTPException(status_code=400, detail="URL is required")
+
     job_id = create_job("ingest-web")
 
     def run():
         try:
-            from mindforge.ingest.web_extractor import extract_url
+            from mindforge.ingest.web_extractor import extract_url, crawl_site
             from mindforge.ingest.sanitizer import sanitize_content
+            from mindforge.ingest.pdf_extractor import chunk_text
             from mindforge.ingest.qa_generator import generate_qa_from_chunk, format_qa_as_dpo
+            from mindforge.vault.database import Database
 
             emit({"type": "ingest_started", "job_id": job_id, "source": req.url})
-            page = extract_url(req.url)
-            sanitized = sanitize_content(page["content"])
-            qa = generate_qa_from_chunk(sanitized["clean_text"])
-            dpo = format_qa_as_dpo(qa)
-            finish_job(
-                job_id,
-                {
-                    "pages": 1,
-                    "qa_pairs": len(qa),
-                    "dpo_entries": len(dpo),
-                    "sanitization": sanitized["is_safe"],
-                },
-            )
+
+            # Step 1: Extract content
+            if req.crawl:
+                pages = crawl_site(req.url, max_pages=req.max_pages, max_depth=req.max_depth)
+            else:
+                page = extract_url(req.url, method="auto")
+                if page.get("error"):
+                    fail_job(job_id, f"Extraction failed: {page['error']}")
+                    return
+                pages = [page]
+
+            if not pages:
+                fail_job(job_id, "No content extracted")
+                return
+
+            emit({"type": "progress", "job_id": job_id, "progress": 25, "stage": "extracted", "pages": len(pages)})
+
+            # Step 2: Sanitize, chunk, and generate Q&A for each page
+            all_qa_pairs = []
+            total_flags = 0
+
+            for i, page in enumerate(pages):
+                content = page.get("content", "")
+                if not content:
+                    continue
+
+                san = sanitize_content(content)
+                if san["flags"]:
+                    total_flags += len(san["flags"])
+                    logger.warning(f"Page {i+1}: {len(san['flags'])} injection flag(s) detected")
+
+                clean_text = san["clean_text"]
+                if not clean_text or len(clean_text) < 50:
+                    continue
+
+                chunks = chunk_text(clean_text)
+                for chunk in chunks:
+                    qa_list = generate_qa_from_chunk(chunk, subject=None, adapter=None)
+                    all_qa_pairs.extend(qa_list)
+
+                # Store web source in database
+                try:
+                    db_path = os.path.join(_PROJECT_ROOT, "data", "mindforge.db")
+                    db = Database(db_path)
+                    import hashlib
+                    content_hash = hashlib.sha256(clean_text.encode()).hexdigest()
+                    db.store_web_source({
+                        "url": page.get("url", req.url),
+                        "page_title": page.get("title", ""),
+                        "content_hash": content_hash,
+                        "word_count": len(clean_text.split()),
+                        "extraction_method": page.get("method_used", "beautifulsoup"),
+                        "sanitization_status": "flagged" if san["flags"] else "clean",
+                        "injection_flags": json.dumps(san["flags"]) if san["flags"] else None,
+                        "crawl_mode": "site" if req.crawl else "single",
+                        "crawl_depth": page.get("depth", 0),
+                    })
+                    db.close()
+                except Exception as db_err:
+                    logger.warning(f"Failed to store web source: {db_err}")
+
+            emit({"type": "progress", "job_id": job_id, "progress": 75, "stage": "qa_generated", "qa_pairs": len(all_qa_pairs)})
+
+            # Step 3: Format as DPO and write output
+            dpo_entries = format_qa_as_dpo(all_qa_pairs)
+            output_dir = os.path.join(_PROJECT_ROOT, "data", "training-data", "dpo")
+            os.makedirs(output_dir, exist_ok=True)
+            output_path = os.path.join(output_dir, "ingest_web.jsonl")
+            with open(output_path, "w") as f:
+                for entry in dpo_entries:
+                    f.write(json.dumps(entry) + "\n")
+
+            finish_job(job_id, {
+                "pages": len(pages),
+                "qa_pairs": len(all_qa_pairs),
+                "dpo_entries": len(dpo_entries),
+                "output_path": output_path,
+                "injection_flags": total_flags,
+            })
         except Exception as e:
             fail_job(job_id, str(e))
+            logger.error(f"Web ingest job {job_id} failed: {e}")
 
     threading.Thread(target=run, daemon=True).start()
     return {"job_id": job_id, "status": "started"}
@@ -537,37 +750,41 @@ async def ingest_web(req: IngestWebRequest):
 @app.get("/api/stats")
 async def get_stats():
     """Get aggregate statistics from the database."""
-    from mindforge.vault.database import Database
+    try:
+        from mindforge.vault.database import Database
 
-    db = Database(os.path.join(_PROJECT_ROOT, "data", "mindforge.db"))
-    cursor = db.conn.cursor()
+        db = Database(os.path.join(_PROJECT_ROOT, "data", "mindforge.db"))
+        cursor = db.conn.cursor()
 
-    cursor.execute("SELECT COUNT(*) FROM responses")
-    total_q = cursor.fetchone()[0]
+        cursor.execute("SELECT COUNT(*) FROM responses")
+        total_q = cursor.fetchone()[0]
 
-    cursor.execute("SELECT COUNT(*) FROM training_entries")
-    training_pairs = cursor.fetchone()[0]
+        cursor.execute("SELECT COUNT(*) FROM training_entries")
+        training_pairs = cursor.fetchone()[0]
 
-    cursor.execute("SELECT COUNT(DISTINCT subject) FROM responses")
-    subjects = cursor.fetchone()[0]
+        cursor.execute("SELECT COUNT(DISTINCT subject) FROM responses")
+        subjects = cursor.fetchone()[0]
 
-    cursor.execute("SELECT subject, AVG(is_correct) * 100 as accuracy FROM responses GROUP BY subject")
-    accuracy = {}
-    for row in cursor.fetchall():
-        domain = row[0].split("_")[0] if row[0] else "unknown"
-        if domain not in accuracy:
-            accuracy[domain] = []
-        accuracy[domain].append(row[1])
-    accuracy = {k: sum(v) / len(v) for k, v in accuracy.items()}
+        cursor.execute("SELECT subject, AVG(is_correct) * 100 as accuracy FROM responses GROUP BY subject")
+        accuracy = {}
+        for row in cursor.fetchall():
+            domain = row[0].split("_")[0] if row[0] else "unknown"
+            if domain not in accuracy:
+                accuracy[domain] = []
+            accuracy[domain].append(row[1])
+        accuracy = {k: sum(v) / len(v) for k, v in accuracy.items()}
 
-    db.close()
-    return {
-        "total_questions": total_q,
-        "training_pairs": training_pairs,
-        "subjects": subjects,
-        "training_runs": 0,
-        "accuracy": accuracy,
-    }
+        db.close()
+        return {
+            "total_questions": total_q,
+            "training_pairs": training_pairs,
+            "subjects": subjects,
+            "training_runs": 0,
+            "accuracy": accuracy,
+        }
+    except Exception as e:
+        logger.error(f"Failed to get stats: {e}")
+        raise HTTPException(status_code=500, detail=f"Failed to get stats: {e}")
 
 
 @app.get("/api/jobs")

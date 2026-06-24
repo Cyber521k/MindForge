@@ -106,10 +106,14 @@ def cmd_models(args):
     if model_info.get("exo_cluster"):
         cluster_info = model_info["exo_cluster"]
         print("")
-        print(format_cluster_info(cluster_info))
+        try:
+            from mindforge.hardware.exo_detector import format_cluster_info
+            print(format_cluster_info(cluster_info))
+        except ImportError:
+            pass
         print(f"\n  ✓ Cluster-powered models unlocked!")
         print(f"    Effective memory tier: {model_info.get('cluster_memory_tier', '?')}")
-        print(f"    (was tier {model_info['memory_tier']} on single device)")
+        print(f"    (was tier {model_info.get('memory_tier', '?')} on single device)")
 
     return 0
 
@@ -135,6 +139,9 @@ def cmd_probe(args):
     results = engine.run()
 
     if "error" in results:
+        print(f"✗ Probe failed: {results.get('error', 'Unknown error')}")
+        print(f"  Tip: Ensure the model name is correct and mlx-lm is installed (pip install mlx-lm).")
+        print(f"  For cloud models, ensure the relevant API key is set (e.g., OPENAI_API_KEY).")
         return 1
 
     print(f"\n✓ Probe complete. Output: {results.get('output_path', 'N/A')}")
@@ -161,6 +168,8 @@ def cmd_format(args):
     # Load input data
     if not os.path.exists(args.input):
         print(f"ERROR: Input file not found: {args.input}")
+        print(f"  Tip: Check the file path is correct. Use 'mindforge format --input <file>' to specify the path.")
+        print(f"  Supported formats: JSON (.json) or JSONL (.jsonl)")
         return 1
 
     with open(args.input, "r") as f:
@@ -206,6 +215,7 @@ def cmd_format(args):
                 f.write(json.dumps(entry) + "\n")
     else:
         print(f"ERROR: Unknown format: {fmt}")
+        print(f"  Supported formats: dpo, alpaca, chatml, completion, openai_messages, template_free")
         return 1
 
     print(f"✓ Formatted {len(formatted)} entries as {fmt} -> {args.output}")
@@ -251,6 +261,8 @@ def cmd_convert(args):
         return 0
     except Exception as e:
         print(f"\n✗ Conversion failed: {e}")
+        print(f"  Tip: Ensure mlx-lm is installed (pip install mlx-lm) and the HuggingFace repo name is correct.")
+        print(f"  Example: mindforge convert --source mistralai/Mistral-7B-Instruct-v0.3 --quantize 4bit")
         return 1
 
 
@@ -282,6 +294,8 @@ def cmd_quantize(args):
         return 0
     except Exception as e:
         print(f"\n✗ Quantization failed: {e}")
+        print(f"  Tip: Ensure the model path points to a valid MLX model directory (must contain config.json).")
+        print(f"  Ensure mlx-lm is installed: pip install mlx-lm")
         return 1
 
 
@@ -306,6 +320,9 @@ def cmd_train(args):
         return 0
     except Exception as e:
         print(f"\n✗ Training failed: {e}")
+        print(f"  Tip: Ensure mlx-lm is installed (pip install mlx-lm) and the model name is correct.")
+        print(f"  For DPO/ORPO, install mlx-lm-lora: pip install mlx-lm-lora")
+        print(f"  Training data must be in JSONL format with prompt/chosen/rejected fields.")
         return 1
 
 
@@ -336,6 +353,9 @@ def cmd_evaluate(args):
         return 0
     except Exception as e:
         print(f"\n✗ Evaluation failed: {e}")
+        print(f"  Tip: For lm-eval-harness, install it: pip install lm-eval")
+        print(f"  For mlx evaluation, ensure mlx-lm is installed: pip install mlx-lm")
+        print(f"  The model path must point to a valid MLX model or HuggingFace repo.")
         return 1
 
 
@@ -348,6 +368,8 @@ def cmd_ingest_pdf(args):
 
     if not os.path.exists(args.file):
         print(f"ERROR: PDF file not found: {args.file}")
+        print(f"  Tip: Provide an absolute or relative path to a .pdf file.")
+        print(f"  Example: mindforge ingest-pdf --file /path/to/document.pdf")
         return 1
 
     print(f"=== PDF Ingestion ===")
@@ -361,7 +383,8 @@ def cmd_ingest_pdf(args):
     try:
         result = extract_pdf(args.file)
     except Exception as e:
-        print(f"✗ Extraction failed: {e}")
+        print(f"✗ PDF extraction failed: {e}")
+        print(f"  Tip: Ensure the file is a valid PDF. Install pymupdf if needed: pip install pymupdf")
         return 1
 
     print(f"  Pages:      {result['metadata']['page_count']}")
@@ -451,13 +474,16 @@ def cmd_ingest_web(args):
         page = extract_url(args.url, method="auto")
         pages = [page]
         if page.get("error"):
-            print(f"✗ Extraction failed: {page['error']}")
+            print(f"✗ URL extraction failed: {page['error']}")
+            print(f"  Tip: Check the URL is accessible. Install beautifulsoup4 if needed: pip install beautifulsoup4 requests")
             return 1
         print(f"  Title: {page.get('title', 'N/A')}")
         print(f"  Method: {page.get('method_used', 'N/A')}")
 
     if not pages:
-        print("✗ No content extracted.")
+        print("✗ No content extracted from the URL.")
+        print(f"  Tip: The page may be empty, behind a login wall, or require JavaScript rendering.")
+        print(f"  Try a different URL or use --crawl to fetch linked pages too.")
         return 1
 
     # Step 2: Sanitize all pages
@@ -538,6 +564,16 @@ def main():
     parser = argparse.ArgumentParser(
         prog="mindforge",
         description="MindForge - AI model probing and correction system",
+    )
+
+    # Global flags
+    parser.add_argument(
+        '-v', '--verbose', action='store_true', default=False,
+        help='Enable DEBUG-level logging (shows all internal operations)'
+    )
+    parser.add_argument(
+        '-q', '--quiet', action='store_true', default=False,
+        help='Suppress all output except ERROR-level (useful in scripts)'
     )
 
     subparsers = parser.add_subparsers(dest="command", help="Available commands")
@@ -742,11 +778,19 @@ def main():
 
     if not args.command:
         parser.print_help()
+        print("\nRun 'mindforge detect' to check your hardware and available APIs.")
+        print("Run 'mindforge models' to see which models you can use.")
         return 1
 
-    # Set up logging
+    # Set up logging based on --verbose/--quiet flags
+    if args.verbose:
+        log_level = logging.DEBUG
+    elif args.quiet:
+        log_level = logging.ERROR
+    else:
+        log_level = logging.WARNING
     logging.basicConfig(
-        level=logging.INFO if os.environ.get("MINDFORGE_DEBUG") else logging.WARNING,
+        level=log_level,
         format="%(asctime)s [%(levelname)s] %(name)s: %(message)s",
     )
 

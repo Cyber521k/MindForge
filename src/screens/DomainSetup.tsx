@@ -1,6 +1,8 @@
-import { useState, useEffect, useMemo } from "react";
+import { useState, useEffect, useMemo, useCallback } from "react";
 import { motion } from "framer-motion";
 import { apiGet, type TaxonomyData } from "../lib/api";
+import { LoadingState } from "../components/LoadingState";
+import { ErrorState } from "../components/ErrorState";
 
 const DOMAIN_ICONS: Record<string, string> = {
   STEM: "🔬",
@@ -16,15 +18,25 @@ export function DomainSetup({ onStart }: { onStart?: (subjects: string[], tier: 
   const [expanded, setExpanded] = useState<Set<string>>(new Set());
   const [tier, setTier] = useState("1");
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
 
-  useEffect(() => {
+  const load = useCallback(() => {
+    setLoading(true);
+    setError(null);
     apiGet<TaxonomyData>("/api/taxonomy")
       .then((data) => {
         setTaxonomy(data);
         setLoading(false);
       })
-      .catch(() => setLoading(false));
+      .catch((err) => {
+        setError(err?.message || String(err));
+        setLoading(false);
+      });
   }, []);
+
+  useEffect(() => {
+    load();
+  }, [load]);
 
   const toggle = (subject: string) => {
     const s = new Set(selected);
@@ -57,11 +69,13 @@ export function DomainSetup({ onStart }: { onStart?: (subjects: string[], tier: 
   }, [selected, tier]);
 
   if (loading)
+    return <LoadingState message="Loading taxonomy..." />;
+
+  if (error)
     return (
-      <div style={{ padding: 40, color: "var(--text-secondary)" }}>
-        <motion.div animate={{ opacity: [0.4, 1, 0.4] }} transition={{ duration: 1.5, repeat: Infinity }}>
-          Loading taxonomy...
-        </motion.div>
+      <div style={{ padding: 24 }}>
+        <h1 style={{ fontSize: 24, marginBottom: 20, color: "var(--accent)" }}>Domain Setup</h1>
+        <ErrorState message={`Failed to load taxonomy: ${error}`} onRetry={load} />
       </div>
     );
 
