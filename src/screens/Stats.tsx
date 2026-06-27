@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback, useMemo } from "react";
+import { useState, useEffect, useCallback, useMemo, type CSSProperties } from "react";
 import { motion } from "framer-motion";
 import { apiGet, type Stats as StatsType, type ResponseEntry, type TrainingEntry } from "../lib/api";
 import { LoadingState } from "../components/LoadingState";
@@ -8,12 +8,122 @@ import { SubjectBarChart } from "../components/SubjectBarChart";
 import { ErrorTypePie } from "../components/ErrorTypePie";
 import { ScoreLineChart } from "../components/ScoreLineChart";
 
+const XBOX = {
+  primaryText: "#FFF8DC",
+  neonGreen: "#33FF33",
+  chartreuse: "#CCFF00",
+  dimGreen: "#1A3A1A",
+  glow: "var(--xbox-glow, 0 0 18px rgba(51, 255, 51, 0.45))",
+};
+
+const screenStyle: CSSProperties = {
+  padding: 24,
+  paddingRight: 128,
+  height: "100%",
+  overflowY: "auto",
+  position: "relative",
+  color: XBOX.primaryText,
+};
+
+const titleStyle: CSSProperties = {
+  fontSize: 24,
+  marginBottom: 8,
+  background: "linear-gradient(180deg, #C0C0C0, #808080)",
+  backgroundClip: "text",
+  WebkitBackgroundClip: "text",
+  WebkitTextFillColor: "transparent",
+  color: "transparent",
+  fontFamily: "'Arial Black', Impact, sans-serif",
+  fontWeight: 900,
+  letterSpacing: 0,
+  textTransform: "uppercase",
+};
+
+const headerGlowLineStyle: CSSProperties = {
+  height: 1,
+  marginBottom: 20,
+  background: "linear-gradient(90deg, transparent, #33FF33, transparent)",
+  opacity: 0.6,
+};
+
+const xboxPanelStyle: CSSProperties = {
+  clipPath: "polygon(12px 0, 100% 0, 100% calc(100% - 12px), calc(100% - 12px) 100%, 0 100%, 0 12px)",
+  border: `1px solid ${XBOX.neonGreen}`,
+  boxShadow: XBOX.glow,
+  background: "rgba(10, 26, 10, 0.75)",
+  backdropFilter: "blur(8px)",
+  WebkitBackdropFilter: "blur(8px)",
+  color: XBOX.primaryText,
+};
+
+const sectionHeadingStyle: CSSProperties = {
+  marginBottom: 12,
+  fontSize: 14,
+  color: XBOX.neonGreen,
+  textTransform: "uppercase",
+  letterSpacing: 0,
+};
+
+const decorativeIconStyle: CSSProperties = {
+  position: "absolute",
+  top: 24,
+  right: 24,
+  width: 80,
+  height: 80,
+  filter: `drop-shadow(${XBOX.glow})`,
+  pointerEvents: "none",
+};
+
+function StatsIcon() {
+  return (
+    <div aria-hidden="true" style={decorativeIconStyle}>
+      <div
+        style={{
+          position: "absolute",
+          inset: 8,
+          display: "flex",
+          alignItems: "flex-end",
+          justifyContent: "center",
+          gap: 7,
+          padding: "8px 9px",
+          border: `2px solid ${XBOX.neonGreen}`,
+          clipPath: "polygon(10px 0, 100% 0, 100% calc(100% - 10px), calc(100% - 10px) 100%, 0 100%, 0 10px)",
+          background: "linear-gradient(145deg, rgba(10, 26, 10, 0.95), rgba(0, 0, 0, 0.35))",
+          boxShadow: `inset 0 0 18px rgba(51, 255, 51, 0.18), ${XBOX.glow}`,
+        }}
+      >
+        {[28, 46, 34, 56].map((height, index) => (
+          <div
+            key={height}
+            style={{
+              width: 8,
+              height,
+              background: `linear-gradient(180deg, ${index === 1 ? XBOX.chartreuse : XBOX.neonGreen}, #0b5f14)`,
+              boxShadow: `0 0 10px ${index === 1 ? XBOX.chartreuse : XBOX.neonGreen}`,
+            }}
+          />
+        ))}
+      </div>
+    </div>
+  );
+}
+
+function ScreenHeader() {
+  return (
+    <>
+      <StatsIcon />
+      <h1 style={titleStyle}>Statistics Dashboard</h1>
+      <div style={headerGlowLineStyle} />
+    </>
+  );
+}
+
 // Colors for pie slices
 const ERROR_COLORS: Record<string, string> = {
   factual_error: "var(--error)",
   close_confusion: "var(--warning)",
   reasoning_error: "var(--info)",
-  other: "var(--text-dim)",
+  other: XBOX.dimGreen,
 };
 const ERROR_LABELS: Record<string, string> = {
   factual_error: "Factual Error",
@@ -163,8 +273,8 @@ export function Stats() {
 
   if (error)
     return (
-      <div style={{ padding: 24 }}>
-        <h1 style={{ fontSize: 24, marginBottom: 20, color: "var(--accent)" }}>Statistics</h1>
+      <div style={screenStyle}>
+        <ScreenHeader />
         <ErrorState message={`Failed to load statistics: ${error}`} onRetry={load} />
       </div>
     );
@@ -172,13 +282,15 @@ export function Stats() {
   // Empty state: no probes run yet
   if (responses.length === 0 && trainingEntries.length === 0) {
     return (
-      <div style={{ padding: 24, height: "100%", overflowY: "auto" }}>
-        <h1 style={{ fontSize: 24, marginBottom: 20, color: "var(--accent)" }}>Statistics Dashboard</h1>
-        <EmptyState
-          icon="📊"
-          title="No statistics yet"
-          message="Run a probe to start collecting data. Statistics and charts will appear here."
-        />
+      <div style={screenStyle}>
+        <ScreenHeader />
+        <div className="panel" style={{ ...xboxPanelStyle, padding: 24 }}>
+          <EmptyState
+            icon="📊"
+            title="No statistics yet"
+            message="Run a probe to start collecting data. Statistics and charts will appear here."
+          />
+        </div>
       </div>
     );
   }
@@ -186,8 +298,8 @@ export function Stats() {
   const s = stats || ({} as StatsType);
 
   return (
-    <div style={{ padding: 24, height: "100%", overflowY: "auto" }}>
-      <h1 style={{ fontSize: 24, marginBottom: 20, color: "var(--accent)" }}>Statistics Dashboard</h1>
+    <div style={screenStyle}>
+      <ScreenHeader />
 
       {/* Summary Cards */}
       <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(180px, 1fr))", gap: 12, marginBottom: 20 }}>
@@ -200,8 +312,8 @@ export function Stats() {
       </div>
 
       {/* Bar Chart: Probe Results by Subject */}
-      <div className="panel" style={{ padding: 20, marginBottom: 20 }}>
-        <h2 style={{ marginBottom: 12, fontSize: 14, color: "var(--accent-secondary)", textTransform: "uppercase", letterSpacing: 1 }}>
+      <div className="panel" style={{ ...xboxPanelStyle, padding: 20, marginBottom: 20 }}>
+        <h2 style={sectionHeadingStyle}>
           📊 Probe Results by Subject (Correct vs Incorrect)
         </h2>
         <SubjectBarChart data={subjectData} />
@@ -210,20 +322,20 @@ export function Stats() {
       {/* Two-column: Pie Chart + Memory Tier Breakdown */}
       <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 20, marginBottom: 20 }}>
         {/* Pie Chart: Error Type Distribution */}
-        <div className="panel" style={{ padding: 20 }}>
-          <h2 style={{ marginBottom: 12, fontSize: 14, color: "var(--accent-secondary)", textTransform: "uppercase", letterSpacing: 1 }}>
+        <div className="panel" style={{ ...xboxPanelStyle, padding: 20 }}>
+          <h2 style={sectionHeadingStyle}>
             🥧 Error Type Distribution
           </h2>
           <ErrorTypePie data={errorData} />
         </div>
 
         {/* Progress Bars: Accuracy by Domain (tier breakdown) */}
-        <div className="panel" style={{ padding: 20 }}>
-          <h2 style={{ marginBottom: 12, fontSize: 14, color: "var(--accent-secondary)", textTransform: "uppercase", letterSpacing: 1 }}>
+        <div className="panel" style={{ ...xboxPanelStyle, padding: 20 }}>
+          <h2 style={sectionHeadingStyle}>
             📈 Accuracy by Domain
           </h2>
           {tierBreakdown.length === 0 ? (
-            <div style={{ color: "var(--text-dim)", fontSize: 13, padding: 20, textAlign: "center" }}>
+            <div style={{ color: XBOX.dimGreen, fontSize: 13, padding: 20, textAlign: "center" }}>
               No accuracy data yet. Run probes to see domain breakdown.
             </div>
           ) : (
@@ -233,7 +345,13 @@ export function Stats() {
                 initial={{ opacity: 0, x: -10 }}
                 animate={{ opacity: 1, x: 0 }}
                 transition={{ delay: i * 0.05 }}
-                style={{ marginBottom: 12 }}
+                style={{
+                  marginBottom: 12,
+                  padding: "6px 10px",
+                  background: t.accuracy >= 70 ? "rgba(204, 255, 0, 0.15)" : "transparent",
+                  borderLeft: t.accuracy >= 70 ? `3px solid ${XBOX.chartreuse}` : "3px solid transparent",
+                  boxShadow: t.accuracy >= 70 ? XBOX.glow : "none",
+                }}
               >
                 <div style={{ display: "flex", justifyContent: "space-between", fontSize: 13, marginBottom: 4 }}>
                   <span style={{ textTransform: "capitalize" }}>{t.domain}</span>
@@ -257,20 +375,20 @@ export function Stats() {
       </div>
 
       {/* Line Chart: Probe Score Over Time */}
-      <div className="panel" style={{ padding: 20, marginBottom: 20 }}>
-        <h2 style={{ marginBottom: 12, fontSize: 14, color: "var(--accent-secondary)", textTransform: "uppercase", letterSpacing: 1 }}>
+      <div className="panel" style={{ ...xboxPanelStyle, padding: 20, marginBottom: 20 }}>
+        <h2 style={sectionHeadingStyle}>
           📉 Probe Score Over Time
         </h2>
         <ScoreLineChart data={scoreTimeline} />
       </div>
 
       {/* Training History */}
-      <div className="panel" style={{ padding: 20 }}>
-        <h2 style={{ marginBottom: 12, fontSize: 14, color: "var(--accent-secondary)", textTransform: "uppercase", letterSpacing: 1 }}>
+      <div className="panel" style={{ ...xboxPanelStyle, padding: 20 }}>
+        <h2 style={sectionHeadingStyle}>
           Training History
         </h2>
         {trainingEntries.length === 0 ? (
-          <div style={{ color: "var(--text-dim)", fontSize: 13 }}>
+          <div style={{ color: XBOX.dimGreen, fontSize: 13 }}>
             No training runs yet. Complete a fine-tuning run to see history here.
           </div>
         ) : (
@@ -281,7 +399,7 @@ export function Stats() {
               <span style={{ color: "var(--error)" }}>✗ Rejected: {trainingEntries.filter((e) => e.status === "rejected").length}</span>
               <span style={{ color: "var(--warning)" }}>◐ Pending: {trainingEntries.filter((e) => e.status === "pending").length}</span>
             </div>
-            <div style={{ color: "var(--text-dim)", fontSize: 12 }}>
+            <div style={{ color: XBOX.dimGreen, fontSize: 12 }}>
               {trainingTotal} total training entries · {s.training_runs || 0} fine-tuning run(s) completed
             </div>
           </div>
@@ -298,11 +416,16 @@ function SummaryCard({ label, value, icon, color }: { label: string; value: stri
       initial={{ opacity: 0, y: 8 }}
       animate={{ opacity: 1, y: 0 }}
       className="panel"
-      style={{ padding: 16, borderLeft: `3px solid ${color}` }}
+      style={{
+        ...xboxPanelStyle,
+        padding: 16,
+        background: "rgba(204, 255, 0, 0.15)",
+        borderLeft: `3px solid ${XBOX.chartreuse}`,
+      }}
     >
       <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 6 }}>
         <span style={{ fontSize: 18 }}>{icon}</span>
-        <span style={{ fontSize: 11, color: "var(--text-secondary)", textTransform: "uppercase", letterSpacing: 1 }}>{label}</span>
+        <span style={{ fontSize: 11, color: XBOX.dimGreen, textTransform: "uppercase", letterSpacing: 0 }}>{label}</span>
       </div>
       <div style={{ fontSize: 24, fontWeight: 700, color }}>{value}</div>
     </motion.div>
