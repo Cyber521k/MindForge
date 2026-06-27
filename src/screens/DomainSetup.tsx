@@ -1,8 +1,106 @@
-import { useState, useEffect, useMemo, useCallback } from "react";
+import { useState, useEffect, useMemo, useCallback, type CSSProperties } from "react";
 import { motion } from "framer-motion";
 import { apiGet, type TaxonomyData } from "../lib/api";
 import { LoadingState } from "../components/LoadingState";
 import { ErrorState } from "../components/ErrorState";
+
+const XBOX = {
+  primaryText: "#FFF8DC",
+  neonGreen: "var(--xbox-neon-green, #00ff41)",
+  chartreuse: "var(--xbox-chartreuse, #ccff00)",
+  dimGreen: "var(--xbox-dim-green, #5f8f5f)",
+  glow: "var(--xbox-glow, 0 0 18px rgba(0, 255, 65, 0.45))",
+};
+
+const screenStyle: CSSProperties = {
+  padding: 24,
+  paddingRight: 128,
+  overflowY: "auto",
+  height: "100%",
+  position: "relative",
+  color: XBOX.primaryText,
+};
+
+const titleStyle: CSSProperties = {
+  fontSize: 24,
+  marginBottom: 8,
+  background: "linear-gradient(180deg, #C0C0C0, #808080)",
+  backgroundClip: "text",
+  WebkitBackgroundClip: "text",
+  WebkitTextFillColor: "transparent",
+  color: "transparent",
+  fontFamily: "'Arial Black', Impact, sans-serif",
+  fontWeight: 900,
+  letterSpacing: 0,
+  textTransform: "uppercase",
+};
+
+const headerGlowLineStyle: CSSProperties = {
+  height: 1,
+  marginBottom: 20,
+  background: `linear-gradient(90deg, transparent, ${XBOX.neonGreen}, transparent)`,
+  opacity: 0.6,
+};
+
+const xboxPanelStyle: CSSProperties = {
+  clipPath: "polygon(12px 0, 100% 0, 100% calc(100% - 12px), calc(100% - 12px) 100%, 0 100%, 0 12px)",
+  border: `1px solid ${XBOX.neonGreen}`,
+  boxShadow: XBOX.glow,
+  background: "rgba(10, 26, 10, 0.75)",
+  backdropFilter: "blur(8px)",
+  WebkitBackdropFilter: "blur(8px)",
+  color: XBOX.primaryText,
+};
+
+const sectionHeadingStyle: CSSProperties = {
+  marginBottom: 10,
+  fontSize: 14,
+  color: XBOX.neonGreen,
+  textTransform: "uppercase",
+  letterSpacing: 0,
+};
+
+const decorativeIconStyle: CSSProperties = {
+  position: "absolute",
+  top: 24,
+  right: 24,
+  width: 80,
+  height: 80,
+  filter: `drop-shadow(${XBOX.glow})`,
+  pointerEvents: "none",
+};
+
+function DomainSetupIcon() {
+  return (
+    <div aria-hidden="true" style={decorativeIconStyle}>
+      <div
+        style={{
+          position: "absolute",
+          inset: 8,
+          borderRadius: "50%",
+          border: `2px solid ${XBOX.neonGreen}`,
+          transform: "perspective(220px) rotateY(-24deg) rotateX(10deg)",
+          boxShadow: `inset 0 0 20px rgba(0, 255, 65, 0.18), ${XBOX.glow}`,
+        }}
+      >
+        <div style={{ position: "absolute", top: "49%", left: 4, right: 4, height: 2, background: XBOX.chartreuse, opacity: 0.75 }} />
+        <div style={{ position: "absolute", top: 10, bottom: 10, left: "49%", width: 2, background: XBOX.chartreuse, opacity: 0.75 }} />
+        <div style={{ position: "absolute", inset: "12px 20px", borderLeft: `2px solid ${XBOX.neonGreen}`, borderRight: `2px solid ${XBOX.neonGreen}`, borderRadius: "50%" }} />
+        <div style={{ position: "absolute", inset: "20px 8px", borderTop: `2px solid ${XBOX.neonGreen}`, borderBottom: `2px solid ${XBOX.neonGreen}`, borderRadius: "50%" }} />
+      </div>
+    </div>
+  );
+}
+
+function ScreenHeader() {
+  return (
+    <>
+      <DomainSetupIcon />
+      <h1 style={titleStyle}>Domain Setup</h1>
+      <div style={headerGlowLineStyle} />
+    </>
+  );
+}
 
 const DOMAIN_ICONS: Record<string, string> = {
   STEM: "🔬",
@@ -104,18 +202,18 @@ export function DomainSetup({ onStart }: { onStart?: (subjects: string[], tier: 
 
   if (error)
     return (
-      <div style={{ padding: 24 }}>
-        <h1 style={{ fontSize: 24, marginBottom: 20, color: "var(--accent)" }}>Domain Setup</h1>
+      <div style={screenStyle}>
+        <ScreenHeader />
         <ErrorState message={`Failed to load taxonomy: ${error}`} onRetry={load} />
       </div>
     );
 
   return (
-    <div style={{ padding: 24, overflowY: "auto", height: "100%" }}>
-      <h1 style={{ fontSize: 24, marginBottom: 16, color: "var(--accent)" }}>Domain Setup</h1>
+    <div style={screenStyle}>
+      <ScreenHeader />
 
       {/* Search filter */}
-      <div style={{ marginBottom: 16 }}>
+      <div className="panel" style={{ ...xboxPanelStyle, padding: 16, marginBottom: 16 }}>
         <input
           type="text"
           value={searchQuery}
@@ -125,10 +223,10 @@ export function DomainSetup({ onStart }: { onStart?: (subjects: string[], tier: 
           style={{
             width: "100%",
             padding: "10px 14px",
-            background: "var(--surface-raised)",
-            border: "1px solid var(--border)",
+            background: "rgba(0, 0, 0, 0.24)",
+            border: `1px solid ${XBOX.neonGreen}`,
             borderRadius: 6,
-            color: "var(--text)",
+            color: XBOX.primaryText,
             fontSize: 14,
           }}
         />
@@ -143,7 +241,7 @@ export function DomainSetup({ onStart }: { onStart?: (subjects: string[], tier: 
               border: "none",
               cursor: "pointer",
               fontSize: 16,
-              color: "var(--text-dim)",
+              color: XBOX.dimGreen,
             }}
             aria-label="Clear search"
           >
@@ -160,7 +258,7 @@ export function DomainSetup({ onStart }: { onStart?: (subjects: string[], tier: 
         const icon = DOMAIN_ICONS[domain] || "📚";
 
         return (
-          <div key={domain} className="panel" style={{ marginBottom: 12, overflow: "hidden" }}>
+          <div key={domain} className="panel" style={{ ...xboxPanelStyle, marginBottom: 12, overflow: "hidden" }}>
             <div
               role="button"
               tabIndex={0}
@@ -179,7 +277,11 @@ export function DomainSetup({ onStart }: { onStart?: (subjects: string[], tier: 
                 display: "flex",
                 justifyContent: "space-between",
                 alignItems: "center",
-                borderBottom: isExpanded ? "1px solid var(--border)" : "none",
+                color: XBOX.primaryText,
+                background: selectedInDomain > 0 ? "rgba(204, 255, 0, 0.15)" : "transparent",
+                borderBottom: isExpanded ? `1px solid ${XBOX.neonGreen}` : "none",
+                borderLeft: selectedInDomain > 0 ? `3px solid ${XBOX.chartreuse}` : "3px solid transparent",
+                boxShadow: selectedInDomain > 0 ? XBOX.glow : "none",
               }}
             >
               <span style={{ display: "flex", alignItems: "center", gap: 8, fontSize: 15, fontWeight: 600 }}>
@@ -190,19 +292,19 @@ export function DomainSetup({ onStart }: { onStart?: (subjects: string[], tier: 
                   fontSize: 11,
                   padding: "1px 8px",
                   borderRadius: 10,
-                  background: "var(--surface-raised)",
-                  color: "var(--text)",
+                  background: "rgba(204, 255, 0, 0.12)",
+                  color: XBOX.primaryText,
                   fontWeight: 500,
                 }}>
                   {domainSubjects.length}
                 </span>
                 {selectedInDomain > 0 && (
-                  <span style={{ fontSize: 11, padding: "1px 6px", borderRadius: 3, background: "var(--accent-secondary)", color: "var(--bg)" }}>
+                  <span style={{ fontSize: 11, padding: "1px 6px", borderRadius: 3, background: XBOX.chartreuse, color: "#001f08" }}>
                     {selectedInDomain} selected
                   </span>
                 )}
               </span>
-              <span style={{ color: "var(--text-dim)" }} aria-hidden="true">{isExpanded ? "▼" : "▶"}</span>
+              <span style={{ color: XBOX.dimGreen }} aria-hidden="true">{isExpanded ? "▼" : "▶"}</span>
             </div>
             {isExpanded && (
               <div style={{ padding: "8px 16px" }}>
@@ -229,11 +331,13 @@ export function DomainSetup({ onStart }: { onStart?: (subjects: string[], tier: 
                       display: "flex",
                       alignItems: "center",
                       gap: 8,
-                      background: selected.has(s) ? "var(--surface-raised)" : "transparent",
-                      borderLeft: selected.has(s) ? "3px solid var(--accent)" : "3px solid transparent",
+                      color: selected.has(s) ? XBOX.chartreuse : XBOX.primaryText,
+                      background: selected.has(s) ? "rgba(204, 255, 0, 0.15)" : "transparent",
+                      borderLeft: selected.has(s) ? `3px solid ${XBOX.chartreuse}` : "3px solid transparent",
+                      boxShadow: selected.has(s) ? XBOX.glow : "none",
                     }}
                   >
-                    <span style={{ color: selected.has(s) ? "var(--accent)" : "var(--text-dim)" }} aria-hidden="true">
+                    <span style={{ color: selected.has(s) ? XBOX.chartreuse : XBOX.dimGreen }} aria-hidden="true">
                       {selected.has(s) ? "✓" : "○"}
                     </span>
                     {s.replace(/_/g, " ")}
@@ -246,14 +350,14 @@ export function DomainSetup({ onStart }: { onStart?: (subjects: string[], tier: 
       })}
 
       {Object.keys(filteredCategories).length === 0 && (
-        <div className="panel" style={{ padding: 24, textAlign: "center", color: "var(--text-dim)", fontSize: 14 }}>
+        <div className="panel" style={{ ...xboxPanelStyle, padding: 24, textAlign: "center", color: XBOX.dimGreen, fontSize: 14 }}>
           No subjects match "{searchQuery}"
         </div>
       )}
 
       {/* Probing Depth */}
-      <div className="panel" style={{ padding: 16, marginBottom: 16 }}>
-        <h2 style={{ marginBottom: 10, fontSize: 14, color: "var(--accent-secondary)", textTransform: "uppercase", letterSpacing: 1 }}>
+      <div className="panel" style={{ ...xboxPanelStyle, padding: 16, marginBottom: 16 }}>
+        <h2 style={sectionHeadingStyle}>
           Probing Depth
         </h2>
         {[
@@ -282,10 +386,13 @@ export function DomainSetup({ onStart }: { onStart?: (subjects: string[], tier: 
               display: "flex",
               alignItems: "center",
               gap: 8,
-              background: tier === t ? "var(--surface-raised)" : "transparent",
+              color: tier === t ? XBOX.chartreuse : XBOX.primaryText,
+              background: tier === t ? "rgba(204, 255, 0, 0.15)" : "transparent",
+              borderLeft: tier === t ? `3px solid ${XBOX.chartreuse}` : "3px solid transparent",
+              boxShadow: tier === t ? XBOX.glow : "none",
             }}
           >
-            <span style={{ color: tier === t ? "var(--accent)" : "var(--text-dim)" }} aria-hidden="true">
+            <span style={{ color: tier === t ? XBOX.chartreuse : XBOX.dimGreen }} aria-hidden="true">
               {tier === t ? "✓" : "○"}
             </span>
             {label}
@@ -294,21 +401,21 @@ export function DomainSetup({ onStart }: { onStart?: (subjects: string[], tier: 
       </div>
 
       {/* Summary + Actions */}
-      <div className="panel-raised" style={{ padding: 16, marginBottom: 16 }}>
+      <div className="panel-raised" style={{ ...xboxPanelStyle, padding: 16, marginBottom: 16 }}>
         <div style={{ fontSize: 14, marginBottom: 8 }}>
-          Selected: <span style={{ color: "var(--accent)" }}>{selected.size}</span> / {totalSubjects} subjects
+          Selected: <span style={{ color: XBOX.chartreuse }}>{selected.size}</span> / {totalSubjects} subjects
         </div>
-        <div style={{ fontSize: 13, color: "var(--text-secondary)", marginBottom: 12 }}>
+        <div style={{ fontSize: 13, color: XBOX.dimGreen, marginBottom: 12 }}>
           Estimated questions: ~{estimatedQuestions} (Tier {tier})
         </div>
         <div style={{ display: "flex", gap: 8, marginBottom: 12 }}>
-          <button onClick={selectAll} style={{ flex: 1, padding: 6, fontSize: 12, background: "var(--surface-raised)", color: "var(--text)", border: "1px solid var(--border)", borderRadius: 4, cursor: "pointer" }}>
+          <button onClick={selectAll} style={{ flex: 1, padding: 6, fontSize: 12, background: "rgba(10, 26, 10, 0.7)", color: XBOX.primaryText, border: `1px solid ${XBOX.neonGreen}`, borderRadius: 4, cursor: "pointer" }}>
             Select All
           </button>
-          <button onClick={selectNone} style={{ flex: 1, padding: 6, fontSize: 12, background: "var(--surface-raised)", color: "var(--text)", border: "1px solid var(--border)", borderRadius: 4, cursor: "pointer" }}>
+          <button onClick={selectNone} style={{ flex: 1, padding: 6, fontSize: 12, background: "rgba(10, 26, 10, 0.7)", color: XBOX.primaryText, border: `1px solid ${XBOX.neonGreen}`, borderRadius: 4, cursor: "pointer" }}>
             Select None
           </button>
-          <button onClick={expandAll} style={{ flex: 1, padding: 6, fontSize: 12, background: "var(--surface-raised)", color: "var(--text)", border: "1px solid var(--border)", borderRadius: 4, cursor: "pointer" }}>
+          <button onClick={expandAll} style={{ flex: 1, padding: 6, fontSize: 12, background: "rgba(10, 26, 10, 0.7)", color: XBOX.primaryText, border: `1px solid ${XBOX.neonGreen}`, borderRadius: 4, cursor: "pointer" }}>
             Expand All
           </button>
         </div>

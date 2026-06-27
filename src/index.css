@@ -18,6 +18,15 @@
   --error: #D26464;
   --info: #4DD0E1;
   --border: #CD7F32;
+  --xbox-neon-green: #33FF33;
+  --xbox-chartreuse: #CCFF00;
+  --xbox-black: #000000;
+  --xbox-dark-green: #0A1A0A;
+  --xbox-dim-green: #1A3A1A;
+  --xbox-amber: #FF8800;
+  --xbox-silver: #C0C0C0;
+  --xbox-glow: 0 0 8px rgba(51,255,51,0.6);
+  --xbox-panel-opacity: 0.75;
 }
 
 * { box-sizing: border-box; margin: 0; padding: 0; }
@@ -188,21 +197,22 @@ textarea:focus-visible,
 .hex-grid {
   position: relative;
   overflow: hidden;
+  background-color: var(--xbox-dark-green);
   background-image:
     radial-gradient(
       circle at 50% 50%,
-      rgba(255, 215, 0, 0.10) 0%,
-      rgba(255, 215, 0, 0.04) 18%,
-      rgba(205, 127, 50, 0.035) 34%,
-      rgba(4, 28, 28, 0.12) 48%,
+      rgba(51, 255, 51, 0.10) 0%,
+      rgba(51, 255, 51, 0.04) 18%,
+      rgba(204, 255, 0, 0.035) 34%,
+      rgba(10, 26, 10, 0.18) 48%,
       transparent 68%
     ),
     repeating-linear-gradient(
       60deg,
       transparent 0px,
       transparent 28px,
-      rgba(205, 127, 50, 0.03) 28px,
-      rgba(205, 127, 50, 0.03) 29px,
+      rgba(51, 255, 51, 0.045) 28px,
+      rgba(51, 255, 51, 0.045) 29px,
       transparent 29px,
       transparent 56px
     ),
@@ -210,8 +220,8 @@ textarea:focus-visible,
       -60deg,
       transparent 0px,
       transparent 28px,
-      rgba(205, 127, 50, 0.03) 28px,
-      rgba(205, 127, 50, 0.03) 29px,
+      rgba(51, 255, 51, 0.035) 28px,
+      rgba(51, 255, 51, 0.035) 29px,
       transparent 29px,
       transparent 56px
     ),
@@ -219,14 +229,14 @@ textarea:focus-visible,
       0deg,
       transparent 0px,
       transparent 28px,
-      rgba(205, 127, 50, 0.03) 28px,
-      rgba(205, 127, 50, 0.03) 29px,
+      rgba(51, 255, 51, 0.025) 28px,
+      rgba(51, 255, 51, 0.025) 29px,
       transparent 29px,
       transparent 56px
     ),
     radial-gradient(
       ellipse 70% 50% at 35% 35%,
-      rgba(255, 215, 0, 0.06) 0%,
+      rgba(204, 255, 0, 0.06) 0%,
       transparent 60%
     );
   opacity: 0.8;
@@ -244,16 +254,16 @@ textarea:focus-visible,
 
 .hex-grid::before {
   background-image:
-    radial-gradient(ellipse 75% 18% at 10% 42%, transparent 35%, rgba(255, 215, 0, 0.12) 47%, transparent 59%),
-    radial-gradient(ellipse 65% 14% at 72% 58%, transparent 38%, rgba(205, 127, 50, 0.10) 49%, transparent 61%);
+    radial-gradient(ellipse 75% 18% at 10% 42%, transparent 35%, rgba(51, 255, 51, 0.12) 47%, transparent 59%),
+    radial-gradient(ellipse 65% 14% at 72% 58%, transparent 38%, rgba(204, 255, 0, 0.10) 49%, transparent 61%);
   animation: energy-line-flow 18s linear infinite;
   opacity: 0.5;
 }
 
 .hex-grid::after {
   background-image:
-    radial-gradient(ellipse 82% 16% at 92% 34%, transparent 37%, rgba(255, 215, 0, 0.10) 48%, transparent 60%),
-    radial-gradient(ellipse 70% 12% at 28% 68%, transparent 36%, rgba(196, 218, 125, 0.08) 48%, transparent 60%);
+    radial-gradient(ellipse 82% 16% at 92% 34%, transparent 37%, rgba(51, 255, 51, 0.10) 48%, transparent 60%),
+    radial-gradient(ellipse 70% 12% at 28% 68%, transparent 36%, rgba(204, 255, 0, 0.08) 48%, transparent 60%);
   animation: energy-line-flow-reverse 24s linear infinite;
   opacity: 0.4;
 }
@@ -270,7 +280,7 @@ textarea:focus-visible,
     rgba(0, 0, 0, 0.08) 3px,
     rgba(0, 0, 0, 0.08) 4px
   );
-  opacity: 0.35;
+  opacity: 0.08;
 }
 
 .xbox-root::after {
@@ -314,10 +324,16 @@ textarea:focus-visible,
    ═══════════════════════════════════════════════ */
 
 .frosted-glass {
-  background: rgba(27, 23, 19, 0.55);
-  backdrop-filter: blur(12px);
-  -webkit-backdrop-filter: blur(12px);
-  border: 1px solid rgba(205, 127, 50, 0.25);
+  background: rgba(10, 26, 10, var(--xbox-panel-opacity));
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+  border: 1px solid rgba(51, 255, 51, 0.22);
+}
+
+.xbox-cursor-bracket {
+  border-left: 2px solid var(--xbox-chartreuse);
+  border-right: 2px solid var(--xbox-chartreuse);
+  box-shadow: var(--xbox-glow);
 }
 
 /* ═══════════════════════════════════════════════
@@ -350,26 +366,78 @@ textarea:focus-visible,
    ═══════════════════════════════════════════════ */
 
 .xbox-orb {
+  position: relative;
   width: 280px;
   height: 280px;
   border-radius: 50%;
+  overflow: hidden;
+  isolation: isolate;
   background:
     radial-gradient(
-      circle at 35% 35%,
-      rgba(255, 215, 0, 0.15) 0%,
-      rgba(255, 215, 0, 0.08) 25%,
-      rgba(205, 127, 50, 0.05) 50%,
-      transparent 70%
+      circle at 37% 30%,
+      rgba(255, 255, 255, 0.42) 0%,
+      rgba(204, 255, 0, 0.20) 12%,
+      transparent 28%
     ),
     radial-gradient(
       circle at 50% 50%,
-      rgba(27, 23, 19, 0.4) 0%,
-      transparent 60%
+      rgba(255, 136, 0, 0.44) 0%,
+      rgba(255, 136, 0, 0.18) 22%,
+      transparent 42%
+    ),
+    radial-gradient(
+      circle at 50% 50%,
+      rgba(51, 255, 51, 0.36) 0%,
+      rgba(26, 58, 26, 0.72) 42%,
+      rgba(10, 26, 10, 0.96) 68%,
+      var(--xbox-black) 100%
     );
   box-shadow:
-    0 0 60px var(--accent-glow),
-    0 0 120px rgba(255, 215, 0, 0.06),
-    inset 0 0 40px rgba(255, 215, 0, 0.08);
+    0 0 42px rgba(51, 255, 51, 0.28),
+    0 0 96px rgba(51, 255, 51, 0.12),
+    inset 0 0 34px rgba(255, 136, 0, 0.28),
+    inset 0 0 72px rgba(51, 255, 51, 0.14);
+}
+
+.xbox-orb::before,
+.xbox-orb::after {
+  content: "";
+  position: absolute;
+  pointer-events: none;
+  border-radius: 50%;
+}
+
+.xbox-orb::before {
+  inset: -16%;
+  z-index: 0;
+  background: conic-gradient(
+    from 0deg,
+    transparent 0deg,
+    rgba(51, 255, 51, 0.20) 54deg,
+    rgba(204, 255, 0, 0.08) 118deg,
+    transparent 170deg,
+    rgba(255, 136, 0, 0.16) 242deg,
+    transparent 360deg
+  );
+  mix-blend-mode: screen;
+  animation: xbox-orb-conic-rotate 30s linear infinite;
+}
+
+.xbox-orb::after {
+  inset: 10% 18% 54% 20%;
+  z-index: 1;
+  background: linear-gradient(
+    135deg,
+    rgba(255, 255, 255, 0.38),
+    rgba(204, 255, 0, 0.12) 48%,
+    transparent 70%
+  );
+  filter: blur(1px);
+  transform: rotate(-12deg);
+}
+
+@keyframes xbox-orb-conic-rotate {
+  to { transform: rotate(360deg); }
 }
 
 /* Orb pulse animation — subtle scale + opacity pulsing */
@@ -399,16 +467,16 @@ textarea:focus-visible,
       0deg,
       transparent 0px,
       transparent 40px,
-      rgba(205, 127, 50, 0.04) 40px,
-      rgba(205, 127, 50, 0.04) 41px
+      rgba(51, 255, 51, 0.04) 40px,
+      rgba(51, 255, 51, 0.04) 41px
     ),
     /* Vertical lines converging toward center */
     repeating-linear-gradient(
       90deg,
       transparent 0px,
       transparent 40px,
-      rgba(205, 127, 50, 0.04) 40px,
-      rgba(205, 127, 50, 0.04) 41px
+      rgba(51, 255, 51, 0.04) 40px,
+      rgba(51, 255, 51, 0.04) 41px
     );
   opacity: 0.5;
 }
@@ -420,18 +488,36 @@ textarea:focus-visible,
       from 0deg at 50% 50%,
       transparent 0deg,
       transparent 14deg,
-      rgba(205, 127, 50, 0.03) 14deg,
-      rgba(205, 127, 50, 0.03) 15deg
+      rgba(51, 255, 51, 0.03) 14deg,
+      rgba(51, 255, 51, 0.03) 15deg
     ),
     /* Horizontal perspective lines */
     repeating-linear-gradient(
       0deg,
       transparent 0px,
       transparent 30px,
-      rgba(205, 127, 50, 0.03) 30px,
-      rgba(205, 127, 50, 0.03) 31px
+      rgba(51, 255, 51, 0.03) 30px,
+      rgba(51, 255, 51, 0.03) 31px
     );
   opacity: 0.4;
+}
+
+.xbox-perspective-floor {
+  background:
+    repeating-linear-gradient(0deg, transparent, transparent 40px, rgba(51,255,51,0.05) 40px, rgba(51,255,51,0.05) 41px),
+    repeating-linear-gradient(90deg, transparent, transparent 40px, rgba(51,255,51,0.05) 40px, rgba(51,255,51,0.05) 41px);
+  transform: perspective(800px) rotateX(60deg);
+  transform-origin: center bottom;
+}
+
+.xbox-circuit-trace {
+  background: linear-gradient(90deg, transparent, rgba(51,255,51,0.3), transparent);
+  height: 1px;
+}
+
+@keyframes xbox-particle-float {
+  0%, 100% { transform: translateY(0) translateX(0); opacity: 0.3; }
+  50% { transform: translateY(-20px) translateX(10px); opacity: 0.8; }
 }
 
 /* ═══════════════════════════════════════════════

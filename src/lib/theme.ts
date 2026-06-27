@@ -22,6 +22,24 @@ export const theme = {
 // Theme variants (selectable in Settings)
 export const themeVariants: Record<string, Record<string, string>> = {
   gold: theme,
+  "xbox-2001": {
+    ...theme,
+    background: "#000000",
+    surface: "#0A1A0A",
+    surfaceRaised: "#1A3A1A",
+    accent: "#33FF33",
+    accentGlow: "#33FF3399",
+    accentDim: "#1A3A1A",
+    accentSecondary: "#CCFF00",
+    textPrimary: "#C0C0C0",
+    textSecondary: "#CCFF00",
+    textDim: "#7A8F7A",
+    success: "#33FF33",
+    warning: "#FF8800",
+    error: "#FF5533",
+    info: "#CCFF00",
+    border: "#33FF33",
+  },
   cyberpunk: {
     ...theme,
     background: "#0a0a0f",

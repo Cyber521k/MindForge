@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, type CSSProperties } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { apiGet, apiPost, type TrainingEntry } from "../lib/api";
 import { ConfidenceBadge } from "../components/ConfidenceBadge";
@@ -6,6 +6,103 @@ import { LoadingState } from "../components/LoadingState";
 import { ErrorState } from "../components/ErrorState";
 import { EmptyState } from "../components/EmptyState";
 import { useWebSocket } from "../hooks/useWebSocket";
+
+const XBOX = {
+  primaryText: "#FFF8DC",
+  neonGreen: "var(--xbox-neon-green, #00ff41)",
+  chartreuse: "var(--xbox-chartreuse, #ccff00)",
+  dimGreen: "var(--xbox-dim-green, #5f8f5f)",
+  glow: "var(--xbox-glow, 0 0 18px rgba(0, 255, 65, 0.45))",
+};
+
+const screenStyle: CSSProperties = {
+  padding: 24,
+  paddingRight: 128,
+  height: "100%",
+  overflowY: "auto",
+  position: "relative",
+  color: XBOX.primaryText,
+};
+
+const titleStyle: CSSProperties = {
+  fontSize: 24,
+  marginBottom: 8,
+  background: "linear-gradient(180deg, #C0C0C0, #808080)",
+  backgroundClip: "text",
+  WebkitBackgroundClip: "text",
+  WebkitTextFillColor: "transparent",
+  color: "transparent",
+  fontFamily: "'Arial Black', Impact, sans-serif",
+  fontWeight: 900,
+  letterSpacing: 0,
+  textTransform: "uppercase",
+};
+
+const headerGlowLineStyle: CSSProperties = {
+  height: 1,
+  marginBottom: 20,
+  background: `linear-gradient(90deg, transparent, ${XBOX.neonGreen}, transparent)`,
+  opacity: 0.6,
+};
+
+const xboxPanelStyle: CSSProperties = {
+  clipPath: "polygon(12px 0, 100% 0, 100% calc(100% - 12px), calc(100% - 12px) 100%, 0 100%, 0 12px)",
+  border: `1px solid ${XBOX.neonGreen}`,
+  boxShadow: XBOX.glow,
+  background: "rgba(10, 26, 10, 0.75)",
+  backdropFilter: "blur(8px)",
+  WebkitBackdropFilter: "blur(8px)",
+  color: XBOX.primaryText,
+};
+
+const sectionLabelStyle: CSSProperties = {
+  fontSize: 12,
+  color: XBOX.neonGreen,
+  marginBottom: 4,
+  textTransform: "uppercase",
+  letterSpacing: 0,
+};
+
+const decorativeIconStyle: CSSProperties = {
+  position: "absolute",
+  top: 24,
+  right: 24,
+  width: 80,
+  height: 80,
+  filter: `drop-shadow(${XBOX.glow})`,
+  pointerEvents: "none",
+};
+
+function ReviewDashboardIcon() {
+  return (
+    <div aria-hidden="true" style={decorativeIconStyle}>
+      <div
+        style={{
+          position: "absolute",
+          inset: "12px 10px 4px",
+          background: "linear-gradient(145deg, rgba(18, 48, 18, 0.95), rgba(4, 14, 4, 0.95))",
+          border: `2px solid ${XBOX.neonGreen}`,
+          clipPath: "polygon(10px 0, 100% 0, 100% calc(100% - 10px), calc(100% - 10px) 100%, 0 100%, 0 10px)",
+          boxShadow: `inset 0 0 18px rgba(0, 255, 65, 0.18), ${XBOX.glow}`,
+        }}
+      />
+      <div style={{ position: "absolute", top: 4, left: 24, width: 32, height: 16, borderRadius: 4, background: XBOX.chartreuse, boxShadow: XBOX.glow }} />
+      {[26, 38, 50].map((top) => (
+        <div key={top} style={{ position: "absolute", top, left: 22, right: 20, height: 3, background: XBOX.neonGreen, opacity: 0.75 }} />
+      ))}
+    </div>
+  );
+}
+
+function ScreenHeader() {
+  return (
+    <>
+      <ReviewDashboardIcon />
+      <h1 style={titleStyle}>Review Dashboard</h1>
+      <div style={headerGlowLineStyle} />
+    </>
+  );
+}
 
 // Judge model options
 const JUDGE_MODELS = [
@@ -236,8 +333,8 @@ export function ReviewDashboard({ onFormat }: { onFormat?: () => void }) {
 
   if (error)
     return (
-      <div style={{ padding: 24 }}>
-        <h1 style={{ fontSize: 24, marginBottom: 20, color: "var(--accent)" }}>Review Dashboard</h1>
+      <div style={screenStyle}>
+        <ScreenHeader />
         <ErrorState message={`Failed to load review queue: ${error}`} onRetry={load} />
       </div>
     );
@@ -248,38 +345,40 @@ export function ReviewDashboard({ onFormat }: { onFormat?: () => void }) {
 
   if (entries.length === 0) {
     return (
-      <div style={{ padding: 24, height: "100%", overflowY: "auto" }}>
-        <h1 style={{ fontSize: 24, marginBottom: 20, color: "var(--accent)" }}>Review Dashboard</h1>
-        <EmptyState
-          icon="📋"
-          title="Review queue is empty"
-          message="Run a probe to generate training entries that need review."
-        />
+      <div style={screenStyle}>
+        <ScreenHeader />
+        <div className="panel" style={{ ...xboxPanelStyle, padding: 24 }}>
+          <EmptyState
+            icon="📋"
+            title="Review queue is empty"
+            message="Run a probe to generate training entries that need review."
+          />
+        </div>
       </div>
     );
   }
 
   return (
-    <div style={{ padding: 24, height: "100%", overflowY: "auto" }}>
-      <h1 style={{ fontSize: 24, marginBottom: 16, color: "var(--accent)" }}>Review Dashboard</h1>
+    <div style={screenStyle}>
+      <ScreenHeader />
 
       {/* Auto-Review Controls */}
-      <div className="panel" style={{ padding: 16, marginBottom: 16 }}>
+      <div className="panel" style={{ ...xboxPanelStyle, padding: 16, marginBottom: 16 }}>
         <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", flexWrap: "wrap", gap: 12 }}>
           <div style={{ display: "flex", alignItems: "center", gap: 12, flexWrap: "wrap" }}>
             {/* Judge model selector */}
             <div>
-              <label style={{ fontSize: 11, color: "var(--text-secondary)", display: "block", marginBottom: 2 }}>Judge Model</label>
+              <label style={{ fontSize: 11, color: XBOX.dimGreen, display: "block", marginBottom: 2 }}>Judge Model</label>
               <select
                 value={judgeModel}
                 onChange={(e) => setJudgeModel(e.target.value)}
                 disabled={autoReviewing}
                 style={{
                   padding: "6px 8px",
-                  background: "var(--surface-raised)",
-                  border: "1px solid var(--border)",
+                  background: "rgba(0, 0, 0, 0.24)",
+                  border: `1px solid ${XBOX.neonGreen}`,
                   borderRadius: 4,
-                  color: "var(--text)",
+                  color: XBOX.primaryText,
                   fontSize: 12,
                   cursor: "pointer",
                 }}
@@ -292,7 +391,7 @@ export function ReviewDashboard({ onFormat }: { onFormat?: () => void }) {
 
             {/* Web search toggle */}
             <div>
-              <label style={{ fontSize: 11, color: "var(--text-secondary)", display: "block", marginBottom: 2 }}>Web Search</label>
+              <label style={{ fontSize: 11, color: XBOX.dimGreen, display: "block", marginBottom: 2 }}>Web Search</label>
               <button
                 onClick={() => setWebSearchEnabled(!webSearchEnabled)}
                 disabled={autoReviewing}
@@ -300,9 +399,11 @@ export function ReviewDashboard({ onFormat }: { onFormat?: () => void }) {
                 aria-label={`Web search ${webSearchEnabled ? "enabled" : "disabled"}`}
                 style={{
                   padding: "6px 12px",
-                  background: webSearchEnabled ? "var(--accent)" : "var(--surface-raised)",
-                  color: webSearchEnabled ? "var(--bg)" : "var(--text-dim)",
-                  border: "1px solid var(--border)",
+                  background: webSearchEnabled ? "rgba(204, 255, 0, 0.15)" : "rgba(10, 26, 10, 0.7)",
+                  color: webSearchEnabled ? XBOX.chartreuse : XBOX.dimGreen,
+                  border: webSearchEnabled ? `1px solid ${XBOX.chartreuse}` : `1px solid ${XBOX.neonGreen}`,
+                  borderLeft: webSearchEnabled ? `3px solid ${XBOX.chartreuse}` : `1px solid ${XBOX.neonGreen}`,
+                  boxShadow: webSearchEnabled ? XBOX.glow : "none",
                   borderRadius: 4,
                   cursor: "pointer",
                   fontSize: 12,
@@ -328,7 +429,7 @@ export function ReviewDashboard({ onFormat }: { onFormat?: () => void }) {
         {/* Auto-review progress bar */}
         {autoReviewing && (
           <div style={{ marginTop: 12 }}>
-            <div style={{ display: "flex", justifyContent: "space-between", fontSize: 12, color: "var(--text-secondary)", marginBottom: 4 }}>
+            <div style={{ display: "flex", justifyContent: "space-between", fontSize: 12, color: XBOX.dimGreen, marginBottom: 4 }}>
               <span>Auto-reviewing entries...</span>
               <span>{autoProgress.toFixed(0)}%</span>
             </div>
@@ -359,12 +460,12 @@ export function ReviewDashboard({ onFormat }: { onFormat?: () => void }) {
       </div>
 
       {/* Queue Status */}
-      <div className="panel" style={{ padding: 16, marginBottom: 16 }}>
+      <div className="panel" style={{ ...xboxPanelStyle, padding: 16, marginBottom: 16 }}>
         <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 8 }}>
           <span style={{ fontSize: 14 }}>
             <span style={{ color: "var(--warning)" }}>{remaining}</span> items awaiting review
           </span>
-          <span style={{ fontSize: 14, color: "var(--text-secondary)" }}>
+          <span style={{ fontSize: 14, color: XBOX.dimGreen }}>
             Item {idx + 1} of {entries.length}
           </span>
         </div>
@@ -383,7 +484,7 @@ export function ReviewDashboard({ onFormat }: { onFormat?: () => void }) {
 
       {/* Action error */}
       {actionError && (
-        <div className="panel" style={{ padding: 12, marginBottom: 16, borderLeft: "3px solid var(--error)" }}>
+        <div className="panel" style={{ ...xboxPanelStyle, padding: 12, marginBottom: 16, borderLeft: "3px solid var(--error)" }}>
           <span style={{ color: "var(--error)", fontSize: 14, fontWeight: 600 }}>✗ Action failed: {actionError}</span>
         </div>
       )}
@@ -396,10 +497,10 @@ export function ReviewDashboard({ onFormat }: { onFormat?: () => void }) {
             animate={{ opacity: 1, x: 0 }}
             exit={{ opacity: 0, x: -20 }}
             className="panel"
-            style={{ padding: 20, marginBottom: 16 }}
+            style={{ ...xboxPanelStyle, padding: 20, marginBottom: 16 }}
           >
             {/* Metadata */}
-            <div style={{ display: "flex", gap: 12, marginBottom: 16, fontSize: 12, color: "var(--text-secondary)", flexWrap: "wrap", alignItems: "center" }}>
+            <div style={{ display: "flex", gap: 12, marginBottom: 16, fontSize: 12, color: XBOX.dimGreen, flexWrap: "wrap", alignItems: "center" }}>
               <span>[{entry.subject}]</span>
               <span>Format: {entry.format}</span>
               <ConfidenceBadge confidence={entry.confidence ?? 0.55} />
@@ -419,17 +520,17 @@ export function ReviewDashboard({ onFormat }: { onFormat?: () => void }) {
 
             {/* Auto-review result panel */}
             {autoResult && (
-              <div className="panel-raised" style={{ padding: 14, marginBottom: 16, borderLeft: "3px solid var(--info)" }}>
+              <div className="panel-raised" style={{ ...xboxPanelStyle, padding: 14, marginBottom: 16, borderLeft: "3px solid var(--info)" }}>
                 {/* Judge confidence meter */}
                 <div style={{ display: "flex", alignItems: "center", gap: 12, marginBottom: 10 }}>
-                  <span style={{ fontSize: 12, color: "var(--text-secondary)", textTransform: "uppercase", letterSpacing: 1 }}>Judge Confidence</span>
+                  <span style={{ fontSize: 12, color: XBOX.neonGreen, textTransform: "uppercase", letterSpacing: 0 }}>Judge Confidence</span>
                   <ConfidenceMeter confidence={autoResult.confidence} />
                 </div>
 
                 {/* Explanation */}
                 {autoResult.explanation && (
-                  <div style={{ fontSize: 13, color: "var(--text)", marginBottom: 10, lineHeight: 1.5 }}>
-                    <span style={{ color: "var(--text-secondary)", fontWeight: 600 }}>Explanation: </span>
+                  <div style={{ fontSize: 13, color: XBOX.primaryText, marginBottom: 10, lineHeight: 1.5 }}>
+                    <span style={{ color: XBOX.dimGreen, fontWeight: 600 }}>Explanation: </span>
                     {autoResult.explanation}
                   </div>
                 )}
@@ -441,7 +542,7 @@ export function ReviewDashboard({ onFormat }: { onFormat?: () => void }) {
                     alignItems: "center",
                     gap: 8,
                     padding: "8px 12px",
-                    background: "var(--surface)",
+                    background: "rgba(0, 0, 0, 0.24)",
                     borderRadius: 4,
                     fontSize: 12,
                   }}>
@@ -467,7 +568,7 @@ export function ReviewDashboard({ onFormat }: { onFormat?: () => void }) {
 
                 {/* Auto action badge */}
                 <div style={{ marginTop: 8, fontSize: 12 }}>
-                  <span style={{ color: "var(--text-secondary)" }}>Auto action: </span>
+                  <span style={{ color: XBOX.dimGreen }}>Auto action: </span>
                   <span style={{
                     fontWeight: 600,
                     color: autoResult.action === "accept" ? "var(--success)" : autoResult.action === "reject" ? "var(--error)" : "var(--info)",
@@ -480,8 +581,8 @@ export function ReviewDashboard({ onFormat }: { onFormat?: () => void }) {
 
             {/* Prompt */}
             <div style={{ marginBottom: 16 }}>
-              <div style={{ fontSize: 12, color: "var(--text-secondary)", marginBottom: 4, textTransform: "uppercase", letterSpacing: 1 }}>Question</div>
-              <div className="mono" style={{ padding: 12, background: "var(--surface-raised)", borderRadius: 4, fontSize: 13, whiteSpace: "pre-wrap" }}>
+              <div style={sectionLabelStyle}>Question</div>
+              <div className="mono" style={{ padding: 12, background: "rgba(0, 0, 0, 0.24)", borderRadius: 4, fontSize: 13, whiteSpace: "pre-wrap", color: XBOX.primaryText }}>
                 {entry.prompt}
               </div>
             </div>
@@ -493,10 +594,10 @@ export function ReviewDashboard({ onFormat }: { onFormat?: () => void }) {
                 <textarea
                   value={editedChosen}
                   onChange={(e) => setEditedChosen(e.target.value)}
-                  style={{ width: "100%", minHeight: 80, padding: 12, background: "var(--surface-raised)", border: "1px solid var(--success)", borderRadius: 4, color: "var(--text)", fontFamily: "monospace", fontSize: 13, resize: "vertical" }}
+                  style={{ width: "100%", minHeight: 80, padding: 12, background: "rgba(0, 0, 0, 0.24)", border: "1px solid var(--success)", borderRadius: 4, color: XBOX.primaryText, fontFamily: "monospace", fontSize: 13, resize: "vertical" }}
                 />
               ) : (
-                <div className="mono" style={{ padding: 12, background: "var(--surface-raised)", borderRadius: 4, fontSize: 13, borderLeft: "3px solid var(--success)" }}>
+                <div className="mono" style={{ padding: 12, background: "rgba(0, 0, 0, 0.24)", borderRadius: 4, fontSize: 13, borderLeft: "3px solid var(--success)", color: XBOX.primaryText }}>
                   {autoResult?.edited_chosen || entry.chosen}
                 </div>
               )}
@@ -509,10 +610,10 @@ export function ReviewDashboard({ onFormat }: { onFormat?: () => void }) {
                 <textarea
                   value={editedRejected}
                   onChange={(e) => setEditedRejected(e.target.value)}
-                  style={{ width: "100%", minHeight: 80, padding: 12, background: "var(--surface-raised)", border: "1px solid var(--error)", borderRadius: 4, color: "var(--text)", fontFamily: "monospace", fontSize: 13, resize: "vertical" }}
+                  style={{ width: "100%", minHeight: 80, padding: 12, background: "rgba(0, 0, 0, 0.24)", border: "1px solid var(--error)", borderRadius: 4, color: XBOX.primaryText, fontFamily: "monospace", fontSize: 13, resize: "vertical" }}
                 />
               ) : (
-                <div className="mono" style={{ padding: 12, background: "var(--surface-raised)", borderRadius: 4, fontSize: 13, borderLeft: "3px solid var(--error)" }}>
+                <div className="mono" style={{ padding: 12, background: "rgba(0, 0, 0, 0.24)", borderRadius: 4, fontSize: 13, borderLeft: "3px solid var(--error)", color: XBOX.primaryText }}>
                   {autoResult?.edited_rejected || entry.rejected}
                 </div>
               )}
@@ -527,7 +628,7 @@ export function ReviewDashboard({ onFormat }: { onFormat?: () => void }) {
                 ✗ Reject
               </motion.button>
               {editMode ? (
-                <motion.button whileHover={{ scale: 1.05 }} onClick={() => act("edit")} className="btn-gold gold-glow" style={{ background: "var(--accent)", color: "var(--bg)", padding: "10px 20px", borderRadius: 6, cursor: "pointer", fontWeight: 600, border: "none" }}>
+                <motion.button whileHover={{ scale: 1.05 }} onClick={() => act("edit")} className="btn-gold gold-glow" style={{ background: "rgba(204, 255, 0, 0.15)", color: XBOX.chartreuse, padding: "10px 20px", borderRadius: 6, cursor: "pointer", fontWeight: 600, border: `1px solid ${XBOX.chartreuse}`, borderLeft: `3px solid ${XBOX.chartreuse}`, boxShadow: XBOX.glow }}>
                   ✓ Save Edit
                 </motion.button>
               ) : (
@@ -538,21 +639,21 @@ export function ReviewDashboard({ onFormat }: { onFormat?: () => void }) {
               <motion.button whileHover={{ scale: 1.05 }} onClick={() => act("skip")} className="btn-gold" style={{ background: "var(--warning)", color: "var(--bg)", padding: "10px 20px", borderRadius: 6, cursor: "pointer", fontWeight: 600, border: "none" }}>
                 → Skip
               </motion.button>
-              <motion.button whileHover={{ scale: 1.05 }} onClick={() => setShowHelp(true)} className="btn-gold" style={{ background: "var(--surface-raised)", color: "var(--text-secondary)", padding: "10px 16px", borderRadius: 6, cursor: "pointer", fontWeight: 600, border: "1px solid var(--border)" }}>
+              <motion.button whileHover={{ scale: 1.05 }} onClick={() => setShowHelp(true)} className="btn-gold" style={{ background: "rgba(10, 26, 10, 0.7)", color: XBOX.dimGreen, padding: "10px 16px", borderRadius: 6, cursor: "pointer", fontWeight: 600, border: `1px solid ${XBOX.neonGreen}` }}>
                 ? Help
               </motion.button>
             </div>
 
             {/* Keyboard hints */}
-            <div style={{ marginTop: 12, fontSize: 11, color: "var(--text-dim)" }}>
+            <div style={{ marginTop: 12, fontSize: 11, color: XBOX.dimGreen }}>
               Shortcuts: ←→ Navigate · Enter=Accept · Del=Reject · E=Edit · S=Skip · Ctrl+S=Save · Press ? for shortcuts
             </div>
           </motion.div>
         ) : (
-          <div className="panel" style={{ padding: 40, textAlign: "center" }}>
+          <div className="panel" style={{ ...xboxPanelStyle, padding: 40, textAlign: "center" }}>
             <div style={{ fontSize: 48, marginBottom: 16 }}>⚕</div>
-            <div style={{ color: "var(--text-secondary)", fontSize: 16, marginBottom: 8 }}>Review queue complete!</div>
-            <div style={{ color: "var(--text-dim)", fontSize: 13, marginBottom: 20 }}>All entries have been reviewed.</div>
+            <div style={{ color: XBOX.neonGreen, fontSize: 16, marginBottom: 8 }}>Review queue complete!</div>
+            <div style={{ color: XBOX.dimGreen, fontSize: 13, marginBottom: 20 }}>All entries have been reviewed.</div>
             <button className="btn-gold gold-glow" onClick={onFormat} style={{ padding: "12px 24px", fontSize: 16 }}>
               ► Continue to Format & Export
             </button>
@@ -561,8 +662,8 @@ export function ReviewDashboard({ onFormat }: { onFormat?: () => void }) {
       </AnimatePresence>
 
       {/* Session Stats */}
-      <div className="panel-raised" style={{ padding: 16, display: "flex", gap: 20, fontSize: 13, flexWrap: "wrap" }}>
-        <span>Reviewed: <span style={{ color: "var(--accent)" }}>{sessionStats.reviewed}</span></span>
+      <div className="panel-raised" style={{ ...xboxPanelStyle, padding: 16, display: "flex", gap: 20, fontSize: 13, flexWrap: "wrap" }}>
+        <span>Reviewed: <span style={{ color: XBOX.chartreuse }}>{sessionStats.reviewed}</span></span>
         <span style={{ color: "var(--success)" }}>✓ {sessionStats.accepted}</span>
         <span style={{ color: "var(--error)" }}>✗ {sessionStats.rejected}</span>
         <span style={{ color: "var(--info)" }}>✎ {sessionStats.edited}</span>
@@ -597,16 +698,16 @@ export function ReviewDashboard({ onFormat }: { onFormat?: () => void }) {
               aria-modal="true"
               aria-labelledby="help-title"
               className="panel gold-glow"
-              style={{ padding: 28, maxWidth: 480, width: "90%" }}
+              style={{ ...xboxPanelStyle, padding: 28, maxWidth: 480, width: "90%" }}
             >
               <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 20 }}>
-                <h2 id="help-title" style={{ fontSize: 18, color: "var(--accent)" }}>Keyboard Shortcuts</h2>
+                <h2 id="help-title" style={{ fontSize: 18, color: XBOX.neonGreen }}>Keyboard Shortcuts</h2>
                 <button
                   onClick={() => setShowHelp(false)}
                   aria-label="Close help dialog"
                   style={{
-                    background: "var(--surface-raised)", color: "var(--text)",
-                    border: "1px solid var(--border)", borderRadius: 4,
+                    background: "rgba(10, 26, 10, 0.7)", color: XBOX.primaryText,
+                    border: `1px solid ${XBOX.neonGreen}`, borderRadius: 4,
                     cursor: "pointer", padding: "2px 10px", fontSize: 16,
                   }}
                 >✕</button>
@@ -627,13 +728,13 @@ export function ReviewDashboard({ onFormat }: { onFormat?: () => void }) {
                     { key: "Esc", action: "Close help / exit edit" },
                   ].map(({ key, action }) => (
                     <tr key={key} style={{ borderBottom: "1px solid var(--surface-raised)" }}>
-                      <td style={{ padding: "8px 0", color: "var(--accent)", fontWeight: 600, fontFamily: "monospace", whiteSpace: "nowrap" }}>{key}</td>
-                      <td style={{ padding: "8px 0 8px 16px", color: "var(--text)" }}>{action}</td>
+                      <td style={{ padding: "8px 0", color: XBOX.chartreuse, fontWeight: 600, fontFamily: "monospace", whiteSpace: "nowrap" }}>{key}</td>
+                      <td style={{ padding: "8px 0 8px 16px", color: XBOX.primaryText }}>{action}</td>
                     </tr>
                   ))}
                 </tbody>
               </table>
-              <div style={{ marginTop: 16, fontSize: 11, color: "var(--text-dim)", textAlign: "center" }}>
+              <div style={{ marginTop: 16, fontSize: 11, color: XBOX.dimGreen, textAlign: "center" }}>
                 Press ? or Esc to close
               </div>
             </motion.div>

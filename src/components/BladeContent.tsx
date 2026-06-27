@@ -1,5 +1,54 @@
-import { type ReactNode } from "react";
-import { motion, useReducedMotion } from "framer-motion";
+import { Children, type ReactNode, useEffect, useState } from "react";
+import { AnimatePresence, motion, useReducedMotion } from "framer-motion";
+
+const contentContainerVariants = {
+  hidden: { opacity: 0 },
+  show: {
+    opacity: 1,
+    transition: {
+      staggerChildren: 0.03,
+    },
+  },
+};
+
+const contentChildVariants = {
+  hidden: { y: 10, opacity: 0 },
+  show: {
+    y: 0,
+    opacity: 1,
+    transition: {
+      duration: 0.2,
+      ease: "easeOut",
+    },
+  },
+};
+
+const lineVariants = {
+  hidden: { scaleX: 0, opacity: 0 },
+  show: {
+    scaleX: 1,
+    opacity: 0.6,
+    transition: {
+      duration: 0.2,
+      ease: "easeOut",
+    },
+  },
+};
+
+const reducedContentContainerVariants = {
+  hidden: { opacity: 1 },
+  show: { opacity: 1 },
+};
+
+const reducedContentChildVariants = {
+  hidden: { y: 0, opacity: 1 },
+  show: { y: 0, opacity: 1 },
+};
+
+const reducedLineVariants = {
+  hidden: { scaleX: 1, opacity: 0.6 },
+  show: { scaleX: 1, opacity: 0.6 },
+};
 
 /**
  * BladeContent — wraps screen content in the Xbox blade layout.
@@ -18,6 +67,30 @@ export function BladeContent({
   children: ReactNode;
 }) {
   const prefersReducedMotion = useReducedMotion();
+  const [transitionState, setTransitionState] = useState<"gap" | "ready">(
+    prefersReducedMotion ? "ready" : "gap",
+  );
+  const childNodes = Children.toArray(children);
+
+  useEffect(() => {
+    if (prefersReducedMotion) {
+      setTransitionState("ready");
+      return;
+    }
+
+    setTransitionState("gap");
+    const timer = window.setTimeout(() => setTransitionState("ready"), 100);
+    return () => window.clearTimeout(timer);
+  }, [prefersReducedMotion, title]);
+
+  const containerVariants = prefersReducedMotion
+    ? reducedContentContainerVariants
+    : contentContainerVariants;
+  const childVariants = prefersReducedMotion
+    ? reducedContentChildVariants
+    : contentChildVariants;
+  const headerLineVariants = prefersReducedMotion ? reducedLineVariants : lineVariants;
+
   return (
     <div
       style={{
@@ -31,77 +104,117 @@ export function BladeContent({
           "radial-gradient(ellipse 80% 60% at 30% 40%, rgba(255,215,0,0.04) 0%, transparent 60%), var(--bg)",
       }}
     >
-      {/* Title header with gradient line */}
+      <AnimatePresence initial={false}>
+        {transitionState === "gap" && (
+          <motion.div
+            key="gap"
+            initial={{ opacity: 1 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            transition={{ duration: 0.1, ease: "easeOut" }}
+            style={{
+              position: "absolute",
+              inset: 0,
+              zIndex: 5,
+              background: "#000",
+              pointerEvents: "none",
+            }}
+          />
+        )}
+      </AnimatePresence>
+
       <motion.div
-        initial={{ opacity: 0, y: -10 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ delay: 0.05, duration: 0.25 }}
+        variants={containerVariants}
+        initial="hidden"
+        animate={transitionState === "gap" ? "hidden" : "show"}
         style={{
           display: "flex",
-          alignItems: "center",
-          gap: 12,
-          padding: "16px 32px 12px",
-          flexShrink: 0,
+          flexDirection: "column",
+          height: "100%",
+          minHeight: 0,
           position: "relative",
           zIndex: 1,
         }}
       >
-        {/* Icon in the header (small, not the large left panel) */}
-        <span
-          style={{
-            fontSize: 20,
-            color: "var(--accent)",
-            textShadow: "0 0 12px var(--accent-glow)",
-          }}
-          aria-hidden="true"
-        >
-          {icon}
-        </span>
-        {/* Title text */}
-        <div
-          style={{
-            fontSize: 18,
-            fontWeight: 700,
-            color: "var(--accent)",
-            textTransform: "uppercase",
-            letterSpacing: 3,
-            textShadow: "0 0 10px var(--accent-glow)",
-          }}
-        >
-          {title}
-        </div>
-        {/* Gradient line filling remaining width */}
+        {/* Title header with gradient line */}
         <motion.div
-          initial={{ width: 0 }}
-          animate={{ width: "100%" }}
-          transition={{ delay: 0.2, duration: 0.4 }}
+          variants={childVariants}
           style={{
-            height: 1,
-            background: "linear-gradient(90deg, var(--accent), transparent)",
-            opacity: 0.6,
-            flex: 1,
+            display: "flex",
+            alignItems: "center",
+            gap: 12,
+            padding: "16px 32px 12px",
+            flexShrink: 0,
+            position: "relative",
+            zIndex: 1,
           }}
-        />
-      </motion.div>
+        >
+          {/* Icon in the header (small, not the large left panel) */}
+          <span
+            style={{
+              fontSize: 20,
+              color: "var(--accent)",
+              textShadow: "0 0 12px var(--accent-glow)",
+            }}
+            aria-hidden="true"
+          >
+            {icon}
+          </span>
+          {/* Title text */}
+          <div
+            style={{
+              fontSize: 18,
+              fontWeight: 700,
+              color: "var(--accent)",
+              textTransform: "uppercase",
+              letterSpacing: 3,
+              textShadow: "0 0 10px var(--accent-glow)",
+            }}
+          >
+            {title}
+          </div>
+          {/* Gradient line filling remaining width */}
+          <motion.div
+            variants={headerLineVariants}
+            style={{
+              height: 1,
+              background: "linear-gradient(90deg, var(--accent), transparent)",
+              flex: 1,
+              transformOrigin: "left center",
+            }}
+          />
+        </motion.div>
 
-      {/* Content area — fills full width with frosted glass, wireframe grid shows through */}
-      <motion.div
-        initial={{ opacity: 0 }}
-        animate={{ opacity: 1 }}
-        transition={{ delay: 0.1, duration: 0.3 }}
-        style={{
-          flex: 1,
-          overflowY: "auto",
-          padding: 32,
-          position: "relative",
-          zIndex: 1,
-          // Frosted glass — wireframe grid shows through
-          background: "rgba(27, 23, 19, 0.35)",
-          backdropFilter: "blur(12px)",
-          WebkitBackdropFilter: "blur(12px)",
-        }}
-      >
-        {children}
+        {/* Content area — fills full width with frosted glass, wireframe grid shows through */}
+        <motion.div
+          variants={childVariants}
+          style={{
+            flex: 1,
+            overflowY: "auto",
+            padding: 32,
+            position: "relative",
+            zIndex: 1,
+            // Frosted glass — wireframe grid shows through
+            background: "rgba(27, 23, 19, 0.35)",
+            backdropFilter: "blur(12px)",
+            WebkitBackdropFilter: "blur(12px)",
+          }}
+        >
+          <motion.div
+            variants={containerVariants}
+            style={{ minHeight: "100%" }}
+          >
+            {childNodes.map((child, index) => (
+              <motion.div
+                key={index}
+                variants={childVariants}
+                style={{ minHeight: "100%" }}
+              >
+                {child}
+              </motion.div>
+            ))}
+          </motion.div>
+        </motion.div>
       </motion.div>
     </div>
   );

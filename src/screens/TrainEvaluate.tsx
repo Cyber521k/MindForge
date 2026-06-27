@@ -1,7 +1,121 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, type CSSProperties } from "react";
 import { motion } from "framer-motion";
 import { apiPost } from "../lib/api";
 import { useWebSocket } from "../hooks/useWebSocket";
+
+const XBOX = {
+  primaryText: "#FFF8DC",
+  neonGreen: "var(--xbox-neon-green, #00ff41)",
+  chartreuse: "var(--xbox-chartreuse, #ccff00)",
+  dimGreen: "var(--xbox-dim-green, #5f8f5f)",
+  glow: "var(--xbox-glow, 0 0 18px rgba(0, 255, 65, 0.45))",
+};
+
+const screenStyle: CSSProperties = {
+  padding: 24,
+  paddingRight: 128,
+  height: "100%",
+  overflowY: "auto",
+  position: "relative",
+  color: XBOX.primaryText,
+};
+
+const titleStyle: CSSProperties = {
+  fontSize: 24,
+  marginBottom: 8,
+  background: "linear-gradient(180deg, #C0C0C0, #808080)",
+  backgroundClip: "text",
+  WebkitBackgroundClip: "text",
+  WebkitTextFillColor: "transparent",
+  color: "transparent",
+  fontFamily: "'Arial Black', Impact, sans-serif",
+  fontWeight: 900,
+  letterSpacing: 0,
+  textTransform: "uppercase",
+};
+
+const headerGlowLineStyle: CSSProperties = {
+  height: 1,
+  marginBottom: 20,
+  background: `linear-gradient(90deg, transparent, ${XBOX.neonGreen}, transparent)`,
+  opacity: 0.6,
+};
+
+const xboxPanelStyle: CSSProperties = {
+  clipPath: "polygon(12px 0, 100% 0, 100% calc(100% - 12px), calc(100% - 12px) 100%, 0 100%, 0 12px)",
+  border: `1px solid ${XBOX.neonGreen}`,
+  boxShadow: XBOX.glow,
+  background: "rgba(10, 26, 10, 0.75)",
+  backdropFilter: "blur(8px)",
+  WebkitBackdropFilter: "blur(8px)",
+  color: XBOX.primaryText,
+};
+
+const sectionHeadingStyle: CSSProperties = {
+  marginBottom: 12,
+  fontSize: 14,
+  color: XBOX.neonGreen,
+  textTransform: "uppercase",
+  letterSpacing: 0,
+};
+
+const fieldLabelStyle: CSSProperties = {
+  fontSize: 12,
+  color: XBOX.dimGreen,
+  display: "block",
+  marginBottom: 4,
+};
+
+const fieldStyle: CSSProperties = {
+  width: "100%",
+  padding: 8,
+  background: "rgba(0, 0, 0, 0.24)",
+  border: `1px solid ${XBOX.neonGreen}`,
+  borderRadius: 4,
+  color: XBOX.primaryText,
+};
+
+const decorativeIconStyle: CSSProperties = {
+  position: "absolute",
+  top: 24,
+  right: 24,
+  width: 80,
+  height: 80,
+  filter: `drop-shadow(${XBOX.glow})`,
+  pointerEvents: "none",
+};
+
+function TrainEvaluateIcon() {
+  return (
+    <div aria-hidden="true" style={decorativeIconStyle}>
+      {[0, 14, 28].map((offset, index) => (
+        <div
+          key={offset}
+          style={{
+            position: "absolute",
+            inset: offset,
+            borderRadius: "50%",
+            border: `${index === 0 ? 3 : 2}px solid ${index === 1 ? XBOX.chartreuse : XBOX.neonGreen}`,
+            boxShadow: index === 0 ? XBOX.glow : `inset 0 0 10px rgba(0, 255, 65, 0.18)`,
+            background: index === 2 ? `radial-gradient(circle, ${XBOX.chartreuse} 0 20%, transparent 22%)` : "transparent",
+          }}
+        />
+      ))}
+      <div style={{ position: "absolute", left: 38, top: 2, bottom: 2, width: 2, background: XBOX.neonGreen, opacity: 0.65 }} />
+      <div style={{ position: "absolute", top: 38, left: 2, right: 2, height: 2, background: XBOX.neonGreen, opacity: 0.65 }} />
+    </div>
+  );
+}
+
+function ScreenHeader() {
+  return (
+    <>
+      <TrainEvaluateIcon />
+      <h1 style={titleStyle}>Train & Evaluate</h1>
+      <div style={headerGlowLineStyle} />
+    </>
+  );
+}
 
 interface LossPoint {
   iter: number;
@@ -92,16 +206,16 @@ export function TrainEvaluate() {
   const lossRange = maxLoss - minLoss || 1;
 
   return (
-    <div style={{ padding: 24, height: "100%", overflowY: "auto" }}>
-      <h1 style={{ fontSize: 24, marginBottom: 20, color: "var(--accent)" }}>Train & Evaluate</h1>
+    <div style={screenStyle}>
+      <ScreenHeader />
 
       {/* Training Error */}
       {trainError && (
-        <div className="panel" style={{ padding: 12, marginBottom: 16, borderLeft: "3px solid var(--error)" }}>
+        <div className="panel" style={{ ...xboxPanelStyle, padding: 12, marginBottom: 16, borderLeft: "3px solid var(--error)" }}>
           <span style={{ color: "var(--error)", fontSize: 14, fontWeight: 600 }}>✗ Training failed: {trainError}</span>
           <button
             onClick={() => { setTrainError(null); startTrain(); }}
-            style={{ marginLeft: 12, padding: "4px 12px", fontSize: 12, background: "var(--surface-raised)", color: "var(--text)", border: "1px solid var(--border)", borderRadius: 4, cursor: "pointer" }}
+            style={{ marginLeft: 12, padding: "4px 12px", fontSize: 12, background: "rgba(10, 26, 10, 0.7)", color: XBOX.primaryText, border: `1px solid ${XBOX.neonGreen}`, borderRadius: 4, cursor: "pointer" }}
           >
             ↻ Retry
           </button>
@@ -109,79 +223,84 @@ export function TrainEvaluate() {
       )}
 
       {/* Base Model Selection */}
-      <div className="panel" style={{ padding: 20, marginBottom: 20 }}>
-        <h2 style={{ marginBottom: 12, fontSize: 14, color: "var(--accent-secondary)", textTransform: "uppercase", letterSpacing: 1 }}>Base Model</h2>
+      <div className="panel" style={{ ...xboxPanelStyle, padding: 20, marginBottom: 20 }}>
+        <h2 style={sectionHeadingStyle}>Base Model</h2>
         <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-          <span style={{ color: "var(--accent)" }}>●</span>
+          <span style={{ color: XBOX.chartreuse }}>●</span>
           <input
             value={model}
             onChange={(e) => setModel(e.target.value)}
             aria-label="Base model"
-            style={{ flex: 1, padding: 8, background: "var(--surface-raised)", border: "1px solid var(--border)", borderRadius: 4, color: "var(--text)" }}
+            style={{ ...fieldStyle, flex: 1 }}
           />
         </div>
       </div>
 
       {/* Training Config */}
-      <div className="panel" style={{ padding: 20, marginBottom: 20 }}>
-        <h2 style={{ marginBottom: 12, fontSize: 14, color: "var(--accent-secondary)", textTransform: "uppercase", letterSpacing: 1 }}>Training Config</h2>
+      <div className="panel" style={{ ...xboxPanelStyle, padding: 20, marginBottom: 20 }}>
+        <h2 style={sectionHeadingStyle}>Training Config</h2>
         <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12, marginBottom: 12 }}>
           <div>
-            <label style={{ fontSize: 12, color: "var(--text-secondary)", display: "block", marginBottom: 4 }}>Method</label>
-            <select value={mode} onChange={(e) => setMode(e.target.value)} style={{ width: "100%", padding: 8, background: "var(--surface-raised)", border: "1px solid var(--border)", borderRadius: 4, color: "var(--text)" }}>
+            <label style={fieldLabelStyle}>Method</label>
+            <select value={mode} onChange={(e) => setMode(e.target.value)} style={fieldStyle}>
               <option value="dpo">DPO (preference)</option>
               <option value="sft">SFT (supervised)</option>
               <option value="orpo">ORPO</option>
             </select>
           </div>
           <div>
-            <label style={{ fontSize: 12, color: "var(--text-secondary)", display: "block", marginBottom: 4 }}>Adapter</label>
-            <select value={adapter} onChange={(e) => setAdapter(e.target.value)} style={{ width: "100%", padding: 8, background: "var(--surface-raised)", border: "1px solid var(--border)", borderRadius: 4, color: "var(--text)" }}>
+            <label style={fieldLabelStyle}>Adapter</label>
+            <select value={adapter} onChange={(e) => setAdapter(e.target.value)} style={fieldStyle}>
               <option value="lora">LoRA</option>
               <option value="dora">DoRA</option>
               <option value="full">Full</option>
             </select>
           </div>
           <div>
-            <label style={{ fontSize: 12, color: "var(--text-secondary)", display: "block", marginBottom: 4 }}>Data Path</label>
-            <input value={data} onChange={(e) => setData(e.target.value)} style={{ width: "100%", padding: 8, background: "var(--surface-raised)", border: "1px solid var(--border)", borderRadius: 4, color: "var(--text)" }} />
+            <label style={fieldLabelStyle}>Data Path</label>
+            <input value={data} onChange={(e) => setData(e.target.value)} style={fieldStyle} />
           </div>
           <div>
-            <label style={{ fontSize: 12, color: "var(--text-secondary)", display: "block", marginBottom: 4 }}>Iterations</label>
-            <input type="number" value={iters} onChange={(e) => setIters(+e.target.value)} style={{ width: "100%", padding: 8, background: "var(--surface-raised)", border: "1px solid var(--border)", borderRadius: 4, color: "var(--text)" }} />
+            <label style={fieldLabelStyle}>Iterations</label>
+            <input type="number" value={iters} onChange={(e) => setIters(+e.target.value)} style={fieldStyle} />
           </div>
           <div>
-            <label style={{ fontSize: 12, color: "var(--text-secondary)", display: "block", marginBottom: 4 }}>Batch Size</label>
-            <input type="number" value={batchSize} onChange={(e) => setBatchSize(+e.target.value)} style={{ width: "100%", padding: 8, background: "var(--surface-raised)", border: "1px solid var(--border)", borderRadius: 4, color: "var(--text)" }} />
+            <label style={fieldLabelStyle}>Batch Size</label>
+            <input type="number" value={batchSize} onChange={(e) => setBatchSize(+e.target.value)} style={fieldStyle} />
           </div>
           <div>
-            <label style={{ fontSize: 12, color: "var(--text-secondary)", display: "block", marginBottom: 4 }}>Learning Rate</label>
-            <input type="number" step="0.00001" value={learningRate} onChange={(e) => setLearningRate(+e.target.value)} style={{ width: "100%", padding: 8, background: "var(--surface-raised)", border: "1px solid var(--border)", borderRadius: 4, color: "var(--text)" }} />
+            <label style={fieldLabelStyle}>Learning Rate</label>
+            <input type="number" step="0.00001" value={learningRate} onChange={(e) => setLearningRate(+e.target.value)} style={fieldStyle} />
           </div>
           {mode === "dpo" && (
             <div>
-              <label style={{ fontSize: 12, color: "var(--text-secondary)", display: "block", marginBottom: 4 }}>Beta (DPO)</label>
-              <input type="number" step="0.01" value={beta} onChange={(e) => setBeta(+e.target.value)} style={{ width: "100%", padding: 8, background: "var(--surface-raised)", border: "1px solid var(--border)", borderRadius: 4, color: "var(--text)" }} />
+              <label style={fieldLabelStyle}>Beta (DPO)</label>
+              <input type="number" step="0.01" value={beta} onChange={(e) => setBeta(+e.target.value)} style={fieldStyle} />
             </div>
           )}
         </div>
-        <button className="btn-gold gold-glow" onClick={startTrain} disabled={running} style={{ width: "100%", padding: 12, fontSize: 16, opacity: running ? 0.5 : 1 }}>
+        <button
+          className="btn-gold gold-glow"
+          onClick={startTrain}
+          disabled={running}
+          style={{ width: "100%", padding: 12, fontSize: 16, opacity: running ? 0.5 : 1, background: running ? "rgba(204, 255, 0, 0.15)" : undefined, borderLeft: running ? `3px solid ${XBOX.chartreuse}` : undefined, boxShadow: running ? XBOX.glow : undefined }}
+        >
           {running ? "⏸ Training..." : "► Start Fine-Tuning"}
         </button>
       </div>
 
       {/* Training Progress */}
       {(running || currentIter > 0) && (
-        <div className="panel" style={{ padding: 20, marginBottom: 20 }}>
-          <h2 style={{ marginBottom: 12, fontSize: 14, color: "var(--accent-secondary)", textTransform: "uppercase", letterSpacing: 1 }}>Training Progress</h2>
+        <div className="panel" style={{ ...xboxPanelStyle, padding: 20, marginBottom: 20 }}>
+          <h2 style={sectionHeadingStyle}>Training Progress</h2>
           <div style={{ fontSize: 14, marginBottom: 8 }}>
-            Iteration <span style={{ color: "var(--accent)" }}>{currentIter}</span> / {iters}
+            Iteration <span style={{ color: XBOX.chartreuse }}>{currentIter}</span> / {iters}
           </div>
           <div className="progress-bar" style={{ height: 12, marginBottom: 8 }}>
             <motion.div className="progress-fill" animate={{ width: `${pct}%` }} style={{ width: `${pct}%` }} />
           </div>
-          <div style={{ fontSize: 13, color: "var(--text-secondary)", marginBottom: 12 }}>
-            {pct.toFixed(1)}% · Loss: <span style={{ color: "var(--accent)" }}>{currentLoss.toFixed(4)}</span>
+          <div style={{ fontSize: 13, color: XBOX.dimGreen, marginBottom: 12 }}>
+            {pct.toFixed(1)}% · Loss: <span style={{ color: XBOX.chartreuse }}>{currentLoss.toFixed(4)}</span>
             {lossDelta !== 0 && (
               <span style={{ color: lossDelta < 0 ? "var(--success)" : "var(--error)", marginLeft: 8 }}>
                 ({lossDelta < 0 ? "↓" : "↑"} {Math.abs(lossDelta).toFixed(4)})
@@ -192,11 +311,11 @@ export function TrainEvaluate() {
           {/* Loss Curve */}
           {lossHistory.length > 1 && (
             <div style={{ marginTop: 12 }}>
-              <div style={{ fontSize: 12, color: "var(--text-secondary)", marginBottom: 4 }}>Loss Curve</div>
-              <svg width="100%" height="120" style={{ background: "var(--surface-raised)", borderRadius: 4 }}>
+              <div style={{ fontSize: 12, color: XBOX.dimGreen, marginBottom: 4 }}>Loss Curve</div>
+              <svg width="100%" height="120" style={{ background: "rgba(0, 0, 0, 0.24)", borderRadius: 4 }}>
                 <polyline
                   fill="none"
-                  stroke="var(--accent)"
+                  stroke={XBOX.chartreuse}
                   strokeWidth="2"
                   points={lossHistory
                     .map((p, i) => {
@@ -214,8 +333,8 @@ export function TrainEvaluate() {
       )}
 
       {/* Evaluation */}
-      <div className="panel" style={{ padding: 20 }}>
-        <h2 style={{ marginBottom: 12, fontSize: 14, color: "var(--accent-secondary)", textTransform: "uppercase", letterSpacing: 1 }}>Evaluation</h2>
+      <div className="panel" style={{ ...xboxPanelStyle, padding: 20 }}>
+        <h2 style={sectionHeadingStyle}>Evaluation</h2>
         <button className="btn-gold" onClick={startEval} disabled={evaluating} style={{ padding: "8px 20px", marginBottom: 12, fontSize: 14, opacity: evaluating ? 0.5 : 1 }}>
           {evaluating ? "⏳ Evaluating..." : "► Run Evaluation"}
         </button>
@@ -229,15 +348,15 @@ export function TrainEvaluate() {
             <table style={{ width: "100%", fontSize: 13, borderCollapse: "collapse" }}>
               <thead>
                 <tr style={{ borderBottom: "1px solid var(--border)" }}>
-                  <th style={{ textAlign: "left", padding: "8px 0", color: "var(--text-secondary)" }}>Task</th>
-                  <th style={{ textAlign: "right", padding: "8px 0", color: "var(--text-secondary)" }}>Score</th>
+                  <th style={{ textAlign: "left", padding: "8px 0", color: XBOX.dimGreen }}>Task</th>
+                  <th style={{ textAlign: "right", padding: "8px 0", color: XBOX.dimGreen }}>Score</th>
                 </tr>
               </thead>
               <tbody>
                 <tr>
                   <td style={{ padding: "8px 0" }}>{evalResult.task || "mmlu_stem"}</td>
                   <td style={{ textAlign: "right", padding: "8px 0" }}>
-                    <span style={{ color: "var(--accent)", fontWeight: 700 }}>{(evalResult.score * 100).toFixed(1)}%</span>
+                    <span style={{ color: XBOX.chartreuse, fontWeight: 700 }}>{(evalResult.score * 100).toFixed(1)}%</span>
                   </td>
                 </tr>
               </tbody>

@@ -1,6 +1,19 @@
 import { useRef, useCallback, useState, useEffect } from "react";
 
-type SoundType = "sweep" | "select" | "scroll" | "back" | "boot" | "whoosh";
+type SoundType = "sweep" | "select" | "scroll" | "back" | "boot" | "whoosh" | "hover" | "error";
+
+type AmbientVoice = {
+  osc: OscillatorNode;
+  gain: GainNode;
+};
+
+type AmbientNodes = {
+  voices: AmbientVoice[];
+  filter: BiquadFilterNode;
+  gain: GainNode;
+  lfo: OscillatorNode;
+  lfoGain: GainNode;
+};
 
 /**
  * Web Audio API sound effect manager for Xbox Blades UI.
@@ -9,7 +22,7 @@ type SoundType = "sweep" | "select" | "scroll" | "back" | "boot" | "whoosh";
 export class SoundEngine {
   private ctx: AudioContext | null = null;
   private muted = false;
-  private ambientNodes: { osc: OscillatorNode; lfo: OscillatorNode; gain: GainNode } | null = null;
+  private ambientNodes: AmbientNodes | null = null;
 
   constructor() {
     // Load mute preference
@@ -32,6 +45,33 @@ export class SoundEngine {
     return this.ctx;
   }
 
+  private prefersReducedMotion(): boolean {
+    try {
+      return window.matchMedia?.("(prefers-reduced-motion: reduce)").matches ?? false;
+    } catch {
+      return false;
+    }
+  }
+
+  private canPlay(): boolean {
+    return !this.muted && !this.prefersReducedMotion();
+  }
+
+  private createNoiseBuffer(ctx: AudioContext, duration: number, taper: "none" | "fade-in" | "fade-out" = "none") {
+    const bufferSize = Math.max(1, Math.floor(ctx.sampleRate * duration));
+    const buffer = ctx.createBuffer(1, bufferSize, ctx.sampleRate);
+    const data = buffer.getChannelData(0);
+
+    for (let i = 0; i < bufferSize; i++) {
+      let amp = 1;
+      if (taper === "fade-in") amp = i / bufferSize;
+      if (taper === "fade-out") amp = 1 - i / bufferSize;
+      data[i] = (Math.random() * 2 - 1) * amp;
+    }
+
+    return buffer;
+  }
+
   setMuted(muted: boolean) {
     this.muted = muted;
     try {
@@ -51,22 +91,15 @@ export class SoundEngine {
 
   /** Blade sweep: filtered noise burst with pitch sweep (whoosh) */
   sweep() {
-    if (this.muted) return;
+    if (!this.canPlay()) return;
     const ctx = this.ensureCtx();
     if (!ctx) return;
 
     const now = ctx.currentTime;
     const duration = 0.35;
 
-    // Reuse cached noise buffer to avoid per-call allocation
     if (!this.sweepBuffer) {
-      const bufferSize = ctx.sampleRate * duration;
-      const buffer = ctx.createBuffer(1, bufferSize, ctx.sampleRate);
-      const data = buffer.getChannelData(0);
-      for (let i = 0; i < bufferSize; i++) {
-        data[i] = (Math.random() * 2 - 1) * (1 - i / bufferSize);
-      }
-      this.sweepBuffer = buffer;
+      this.sweepBuffer = this.createNoiseBuffer(ctx, duration, "fade-out");
     }
 
     const noise = ctx.createBufferSource();
@@ -92,66 +125,92 @@ export class SoundEngine {
     noise.stop(now + duration);
   }
 
-  /** Menu select: short sine wave ping at 800Hz, 50ms decay */
+  /** Menu select: dual harmonic chime with a short noisy onset. */
   select() {
-    if (this.muted) return;
+    if (!this.canPlay()) return;
     const ctx = this.ensureCtx();
     if (!ctx) return;
 
     const now = ctx.currentTime;
-    const osc = ctx.createOscillator();
-    osc.type = "sine";
-    osc.frequency.value = 800;
+    const duration = 0.15;
+    const glideEnd = now + 0.13;
 
-    const gain = ctx.createGain();
-    gain.gain.setValueAtTime(0.2, now);
-    gain.gain.exponentialRampToValueAtTime(0.001, now + 0.05);
+    const voices = [
+      { frequency: 880, endFrequency: 730, peak: 0.25 },
+      { frequency: 1760, endFrequency: 1610, peak: 0.12 },
+    ];
 
-    osc.connect(gain);
-    gain.connect(ctx.destination);
-    osc.start(now);
-    osc.stop(now + 0.05);
+    for (const voice of voices) {
+      const osc = ctx.createOscillator();
+      osc.type = "sine";
+      osc.frequency.setValueAtTime(voice.frequency, now);
+      osc.frequency.linearRampToValueAtTime(voice.endFrequency, glideEnd);
+
+      const gain = ctx.createGain();
+      gain.gain.setValueAtTime(0.0001, now);
+      gain.gain.linearRampToValueAtTime(voice.peak, now + 0.003);
+      gain.gain.exponentialRampToValueAtTime(0.001, now + 0.092);
+
+      osc.connect(gain);
+      gain.connect(ctx.destination);
+      osc.start(now);
+      osc.stop(now + duration);
+    }
+
+    const noise = ctx.createBufferSource();
+    noise.buffer = this.createNoiseBuffer(ctx, 0.008);
+
+    const noiseGain = ctx.createGain();
+    noiseGain.gain.setValueAtTime(0.04, now);
+    noiseGain.gain.exponentialRampToValueAtTime(0.001, now + 0.008);
+
+    noise.connect(noiseGain);
+    noiseGain.connect(ctx.destination);
+    noise.start(now);
+    noise.stop(now + 0.008);
   }
 
-  /** Menu scroll: very short tick at 1200Hz, 20ms */
+  /** Menu scroll: descending sine tick through a lowpass filter. */
   scroll() {
-    if (this.muted) return;
+    if (!this.canPlay()) return;
     const ctx = this.ensureCtx();
     if (!ctx) return;
 
     const now = ctx.currentTime;
+    const duration = 0.12;
+
     const osc = ctx.createOscillator();
-    osc.type = "square";
-    osc.frequency.value = 1200;
+    osc.type = "sine";
+    osc.frequency.setValueAtTime(2200, now);
+    osc.frequency.exponentialRampToValueAtTime(1200, now + duration);
+
+    const filter = ctx.createBiquadFilter();
+    filter.type = "lowpass";
+    filter.frequency.setValueAtTime(6000, now);
 
     const gain = ctx.createGain();
-    gain.gain.setValueAtTime(0.08, now);
-    gain.gain.exponentialRampToValueAtTime(0.001, now + 0.02);
+    gain.gain.setValueAtTime(0.0001, now);
+    gain.gain.linearRampToValueAtTime(0.3, now + 0.003);
+    gain.gain.exponentialRampToValueAtTime(0.001, now + 0.103);
 
-    osc.connect(gain);
+    osc.connect(filter);
+    filter.connect(gain);
     gain.connect(ctx.destination);
     osc.start(now);
-    osc.stop(now + 0.02);
+    osc.stop(now + duration);
   }
 
   /** Back: reverse whoosh (pitch sweeps down) */
   back() {
-    if (this.muted) return;
+    if (!this.canPlay()) return;
     const ctx = this.ensureCtx();
     if (!ctx) return;
 
     const now = ctx.currentTime;
     const duration = 0.3;
 
-    // Reuse cached noise buffer
     if (!this.backBuffer) {
-      const bufferSize = ctx.sampleRate * duration;
-      const buffer = ctx.createBuffer(1, bufferSize, ctx.sampleRate);
-      const data = buffer.getChannelData(0);
-      for (let i = 0; i < bufferSize; i++) {
-        data[i] = (Math.random() * 2 - 1) * (i / bufferSize);
-      }
-      this.backBuffer = buffer;
+      this.backBuffer = this.createNoiseBuffer(ctx, duration, "fade-in");
     }
 
     const noise = ctx.createBufferSource();
@@ -175,150 +234,221 @@ export class SoundEngine {
     noise.stop(now + duration);
   }
 
-  /** Boot: low rising tone with a soft harmonic shimmer */
+  /** Boot: Xbox 2001-style harmonic startup chord. */
   boot() {
-    if (this.muted) return;
+    if (!this.canPlay()) return;
     const ctx = this.ensureCtx();
     if (!ctx) return;
 
     const now = ctx.currentTime;
-    const duration = 1.15;
+    const duration = 2.2;
+    const attack = 0.02;
+    const decay = 0.8;
+    const release = 0.4;
+    const sustainStart = now + duration - release;
+    const peakAmplitude = 0.5;
+    const harmonics = [
+      { frequency: 27.3, relativeGain: 1.0 },
+      { frequency: 50.8, relativeGain: 0.42 },
+      { frequency: 74.2, relativeGain: 0.30 },
+      { frequency: 160.2, relativeGain: 0.27 },
+      { frequency: 972.7, relativeGain: 0.16 },
+    ];
 
-    const osc = ctx.createOscillator();
-    osc.type = "sine";
-    osc.frequency.setValueAtTime(82, now);
-    osc.frequency.exponentialRampToValueAtTime(196, now + duration * 0.65);
-    osc.frequency.exponentialRampToValueAtTime(392, now + duration);
+    for (const harmonic of harmonics) {
+      const osc = ctx.createOscillator();
+      osc.type = "sine";
+      osc.frequency.setValueAtTime(harmonic.frequency, now);
 
-    const shimmer = ctx.createOscillator();
-    shimmer.type = "triangle";
-    shimmer.frequency.setValueAtTime(330, now + 0.15);
-    shimmer.frequency.exponentialRampToValueAtTime(660, now + duration);
+      const gain = ctx.createGain();
+      const peak = peakAmplitude * harmonic.relativeGain;
+      const sustain = Math.max(0.001, peak * 0.36);
+      gain.gain.setValueAtTime(0.0001, now);
+      gain.gain.linearRampToValueAtTime(peak, now + attack);
+      gain.gain.exponentialRampToValueAtTime(sustain, now + attack + decay);
+      gain.gain.setValueAtTime(sustain, sustainStart);
+      gain.gain.exponentialRampToValueAtTime(0.001, now + duration);
 
-    const master = ctx.createGain();
-    master.gain.setValueAtTime(0, now);
-    master.gain.linearRampToValueAtTime(0.12, now + 0.18);
-    master.gain.setValueAtTime(0.12, now + duration * 0.72);
-    master.gain.exponentialRampToValueAtTime(0.001, now + duration);
-
-    const shimmerGain = ctx.createGain();
-    shimmerGain.gain.setValueAtTime(0, now);
-    shimmerGain.gain.linearRampToValueAtTime(0.035, now + 0.35);
-    shimmerGain.gain.exponentialRampToValueAtTime(0.001, now + duration);
-
-    osc.connect(master);
-    shimmer.connect(shimmerGain);
-    shimmerGain.connect(master);
-    master.connect(ctx.destination);
-
-    osc.start(now);
-    shimmer.start(now + 0.15);
-    osc.stop(now + duration);
-    shimmer.stop(now + duration);
+      osc.connect(gain);
+      gain.connect(ctx.destination);
+      osc.start(now);
+      osc.stop(now + duration);
+    }
   }
 
-  /**
-   * Whoosh: deeper blade transition sound with more low-end.
-   * Uses a lowpass-filtered noise burst with a sub-bass sine sweep
-   * for a fuller, more cinematic transition effect.
-   */
+  /** Transition whoosh: bandpass white-noise sweep. */
   whoosh() {
-    if (this.muted) return;
+    if (!this.canPlay()) return;
     const ctx = this.ensureCtx();
     if (!ctx) return;
 
     const now = ctx.currentTime;
-    const duration = 0.5;
+    const duration = 0.4;
 
-    // Cached noise buffer for the whoosh
     if (!this.whooshBuffer) {
-      const bufferSize = ctx.sampleRate * duration;
-      const buffer = ctx.createBuffer(1, bufferSize, ctx.sampleRate);
-      const data = buffer.getChannelData(0);
-      for (let i = 0; i < bufferSize; i++) {
-        data[i] = (Math.random() * 2 - 1) * (1 - i / bufferSize);
-      }
-      this.whooshBuffer = buffer;
+      this.whooshBuffer = this.createNoiseBuffer(ctx, duration);
     }
 
     const noise = ctx.createBufferSource();
     noise.buffer = this.whooshBuffer;
 
-    // Lowpass filter for deep, muffled whoosh (more low-end than sweep)
     const filter = ctx.createBiquadFilter();
-    filter.type = "lowpass";
-    filter.frequency.setValueAtTime(800, now);
-    filter.frequency.exponentialRampToValueAtTime(120, now + duration);
-    filter.Q.value = 1.2;
-
-    // Sub-bass sine sweep for extra low-end punch
-    const subBass = ctx.createOscillator();
-    subBass.type = "sine";
-    subBass.frequency.setValueAtTime(120, now);
-    subBass.frequency.exponentialRampToValueAtTime(40, now + duration);
-
-    // Gain envelopes
-    const noiseGain = ctx.createGain();
-    noiseGain.gain.setValueAtTime(0, now);
-    noiseGain.gain.linearRampToValueAtTime(0.18, now + 0.08);
-    noiseGain.gain.exponentialRampToValueAtTime(0.001, now + duration);
-
-    const bassGain = ctx.createGain();
-    bassGain.gain.setValueAtTime(0, now);
-    bassGain.gain.linearRampToValueAtTime(0.12, now + 0.1);
-    bassGain.gain.exponentialRampToValueAtTime(0.001, now + duration);
-
-    noise.connect(filter);
-    filter.connect(noiseGain);
-    noiseGain.connect(ctx.destination);
-
-    subBass.connect(bassGain);
-    bassGain.connect(ctx.destination);
-
-    noise.start(now);
-    subBass.start(now);
-    noise.stop(now + duration);
-    subBass.stop(now + duration);
-  }
-
-  /** Low-volume ambient drone — can be toggled */
-  startAmbient() {
-    if (this.muted) return;
-    const ctx = this.ensureCtx();
-    if (!ctx || this.ambientNodes) return;
-
-    const osc = ctx.createOscillator();
-    osc.type = "sine";
-    osc.frequency.value = 55; // low drone
+    filter.type = "bandpass";
+    filter.frequency.setValueAtTime(200, now);
+    filter.frequency.linearRampToValueAtTime(900, now + 0.2);
+    filter.frequency.linearRampToValueAtTime(200, now + duration);
+    filter.Q.value = 2;
 
     const gain = ctx.createGain();
-    gain.gain.value = 0.02;
+    gain.gain.setValueAtTime(0.0001, now);
+    gain.gain.linearRampToValueAtTime(0.22, now + 0.05);
+    gain.gain.linearRampToValueAtTime(0.08, now + 0.25);
+    gain.gain.exponentialRampToValueAtTime(0.001, now + duration);
 
-    // LFO for subtle modulation
-    const lfo = ctx.createOscillator();
-    lfo.frequency.value = 0.1;
-    const lfoGain = ctx.createGain();
-    lfoGain.gain.value = 0.01;
-    lfo.connect(lfoGain);
-    lfoGain.connect(gain.gain);
+    noise.connect(filter);
+    filter.connect(gain);
+    gain.connect(ctx.destination);
+
+    noise.start(now);
+    noise.stop(now + duration);
+  }
+
+  /** Blade hover: very quiet high tick. */
+  hover() {
+    if (!this.canPlay()) return;
+    const ctx = this.ensureCtx();
+    if (!ctx) return;
+
+    const now = ctx.currentTime;
+    const duration = 0.03;
+    const osc = ctx.createOscillator();
+    osc.type = "sine";
+    osc.frequency.setValueAtTime(1800, now);
+
+    const gain = ctx.createGain();
+    gain.gain.setValueAtTime(0.0001, now);
+    gain.gain.linearRampToValueAtTime(0.08, now + 0.002);
+    gain.gain.exponentialRampToValueAtTime(0.001, now + duration);
 
     osc.connect(gain);
     gain.connect(ctx.destination);
-    osc.start();
-    lfo.start();
-    this.ambientNodes = { osc, lfo, gain };
+    osc.start(now);
+    osc.stop(now + duration);
+  }
+
+  /** Error state: low square-wave buzz. */
+  error() {
+    if (!this.canPlay()) return;
+    const ctx = this.ensureCtx();
+    if (!ctx) return;
+
+    const now = ctx.currentTime;
+    const duration = 0.2;
+    const osc = ctx.createOscillator();
+    osc.type = "square";
+    osc.frequency.setValueAtTime(200, now);
+
+    const gain = ctx.createGain();
+    gain.gain.setValueAtTime(0.0001, now);
+    gain.gain.linearRampToValueAtTime(0.2, now + 0.01);
+    gain.gain.exponentialRampToValueAtTime(0.001, now + duration);
+
+    osc.connect(gain);
+    gain.connect(ctx.destination);
+    osc.start(now);
+    osc.stop(now + duration);
+  }
+
+  /** Layered ambient drone with low harmonics and slow tremolo. */
+  startAmbient() {
+    if (!this.canPlay()) return;
+    const ctx = this.ensureCtx();
+    if (!ctx || this.ambientNodes) return;
+
+    const now = ctx.currentTime;
+    const filter = ctx.createBiquadFilter();
+    filter.type = "lowpass";
+    filter.frequency.setValueAtTime(250, now);
+
+    const gain = ctx.createGain();
+    gain.gain.setValueAtTime(0.0001, now);
+    gain.gain.linearRampToValueAtTime(0.04, now + 1);
+
+    const lfo = ctx.createOscillator();
+    lfo.type = "sine";
+    lfo.frequency.setValueAtTime(0.7, now);
+
+    const lfoGain = ctx.createGain();
+    lfoGain.gain.setValueAtTime(0.02, now);
+    lfo.connect(lfoGain);
+    lfoGain.connect(gain.gain);
+
+    const voices = [
+      { frequency: 27.3, type: "sine" as OscillatorType, level: 0.65 },
+      { frequency: 50.8, type: "sawtooth" as OscillatorType, level: 0.24 },
+      { frequency: 74.2, type: "sawtooth" as OscillatorType, level: 0.16 },
+    ].map((voice) => {
+      const osc = ctx.createOscillator();
+      osc.type = voice.type;
+      osc.frequency.setValueAtTime(voice.frequency, now);
+
+      const voiceGain = ctx.createGain();
+      voiceGain.gain.setValueAtTime(voice.level, now);
+
+      osc.connect(voiceGain);
+      voiceGain.connect(filter);
+      osc.start(now);
+
+      return { osc, gain: voiceGain };
+    });
+
+    filter.connect(gain);
+    gain.connect(ctx.destination);
+    lfo.start(now);
+
+    this.ambientNodes = { voices, filter, gain, lfo, lfoGain };
   }
 
   stopAmbient() {
-    if (this.ambientNodes) {
-      try {
-        this.ambientNodes.osc.stop();
-      } catch {}
-      try {
-        this.ambientNodes.lfo.stop();
-      } catch {}
-      this.ambientNodes = null;
+    if (!this.ambientNodes || !this.ctx) return;
+
+    const nodes = this.ambientNodes;
+    const now = this.ctx.currentTime;
+    const release = 5;
+    this.ambientNodes = null;
+
+    try {
+      nodes.gain.gain.cancelAndHoldAtTime(now);
+    } catch {
+      nodes.gain.gain.cancelScheduledValues(now);
+      nodes.gain.gain.setValueAtTime(0.04, now);
     }
+    nodes.gain.gain.linearRampToValueAtTime(0.0001, now + release);
+
+    for (const voice of nodes.voices) {
+      try {
+        voice.osc.stop(now + release);
+      } catch {}
+    }
+
+    try {
+      nodes.lfo.stop(now + release);
+    } catch {}
+
+    window.setTimeout(() => {
+      for (const voice of nodes.voices) {
+        try {
+          voice.osc.disconnect();
+          voice.gain.disconnect();
+        } catch {}
+      }
+      try {
+        nodes.lfo.disconnect();
+        nodes.lfoGain.disconnect();
+        nodes.filter.disconnect();
+        nodes.gain.disconnect();
+      } catch {}
+    }, release * 1000 + 100);
   }
 
   play(type: SoundType) {
@@ -329,6 +459,8 @@ export class SoundEngine {
       case "back": this.back(); break;
       case "boot": this.boot(); break;
       case "whoosh": this.whoosh(); break;
+      case "hover": this.hover(); break;
+      case "error": this.error(); break;
     }
   }
 }
