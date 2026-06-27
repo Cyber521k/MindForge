@@ -228,6 +228,72 @@ def cmd_review(args):
     return 0
 
 
+def cmd_quality(args):
+    """Run quality analysis for DPO training data."""
+    if not os.path.exists(args.input):
+        print(f"ERROR: Input file not found: {args.input}")
+        print("  Tip: Provide a JSONL file with prompt/chosen/rejected fields.")
+        return 1
+
+    try:
+        with open(args.input, "r") as f:
+            if args.input.endswith(".jsonl"):
+                entries = [json.loads(line) for line in f if line.strip()]
+            else:
+                entries = json.load(f)
+    except json.JSONDecodeError as e:
+        print(f"ERROR: Invalid JSON in input file: {e}")
+        print("  Tip: For JSONL, each line must be a valid JSON object.")
+        return 1
+    except Exception as e:
+        print(f"ERROR: Could not read input file: {e}")
+        return 1
+
+    if not isinstance(entries, list):
+        print("ERROR: Input must contain a list of entries or JSONL objects.")
+        return 1
+
+    from mindforge.review.quality_metrics import generate_quality_report
+
+    report = generate_quality_report(entries, threshold=args.threshold)
+
+    print("=== Quality Analysis ===")
+    print(f"  Input: {args.input}")
+    print(f"  Threshold: {report['threshold']:.2f}")
+    print(f"  Total entries: {report['total_entries']}")
+    print(f"  Kept entries: {report['kept_entries']}")
+    print(f"  Filtered entries: {report['filtered_entries']}")
+
+    if report["metrics"]:
+        print("\nMetric summary:")
+        for key in [
+            "overall_quality",
+            "semantic_similarity",
+            "length_ratio",
+            "answer_diversity",
+            "preference_margin",
+            "difficulty_score",
+        ]:
+            stats = report["metrics"][key]
+            label = key.replace("_", " ")
+            print(
+                f"  {label}: "
+                f"mean={stats['mean']:.3f} "
+                f"median={stats['median']:.3f} "
+                f"min={stats['min']:.3f} "
+                f"max={stats['max']:.3f}"
+            )
+
+    if report["low_quality_indices"]:
+        preview = ", ".join(str(i) for i in report["low_quality_indices"][:20])
+        suffix = " ..." if len(report["low_quality_indices"]) > 20 else ""
+        print(f"\nLow-quality entry indices: {preview}{suffix}")
+    else:
+        print("\nLow-quality entry indices: none")
+
+    return 0
+
+
 def cmd_format(args):
     """Format training data."""
     # Load input data
@@ -722,6 +788,18 @@ def main():
         help="Disable web search fallback for uncertain answers in auto-review"
     )
     review_parser.set_defaults(func=cmd_review)
+
+    # quality command
+    quality_parser = subparsers.add_parser("quality", help="Analyze DPO training data quality")
+    quality_parser.add_argument(
+        "--input", required=True,
+        help="Input DPO data path (JSONL or JSON)"
+    )
+    quality_parser.add_argument(
+        "--threshold", type=float, default=0.3,
+        help="Minimum overall quality score to keep an entry (default: 0.3)"
+    )
+    quality_parser.set_defaults(func=cmd_quality)
 
     # format command
     format_parser = subparsers.add_parser("format", help="Format training data")

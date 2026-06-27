@@ -1,13 +1,30 @@
 // REST API client for MindForge sidecar
 const BASE_URL = "http://localhost:7878";
 
+function getErrorDetail(respBody: any, fallback: string): string {
+  const detail = respBody?.detail;
+
+  if (Array.isArray(detail)) {
+    const messages = detail
+      .map((item: any) => item?.msg)
+      .filter((msg: any): msg is string => typeof msg === "string" && msg.length > 0);
+    return messages.length > 0 ? messages.join("; ") : fallback;
+  }
+
+  if (typeof detail === "string") {
+    return detail;
+  }
+
+  return respBody?.error || respBody?.message || fallback;
+}
+
 export async function apiGet<T = any>(path: string): Promise<T> {
   const res = await fetch(`${BASE_URL}${path}`);
   if (!res.ok) {
     let detail = res.statusText;
     try {
       const body = await res.json();
-      detail = body.detail || body.error || body.message || detail;
+      detail = getErrorDetail(body, detail);
     } catch {
       // response had no JSON body — use statusText
     }
@@ -26,7 +43,7 @@ export async function apiPost<T = any>(path: string, body?: any): Promise<T> {
     let detail = res.statusText;
     try {
       const respBody = await res.json();
-      detail = respBody.detail || respBody.error || respBody.message || detail;
+      detail = getErrorDetail(respBody, detail);
     } catch {
       // response had no JSON body — use statusText
     }

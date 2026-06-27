@@ -88,6 +88,18 @@ class TestAutoReviewerInit(unittest.TestCase):
         from mindforge.review.auto_reviewer import AutoReviewer
         self.assertEqual(AutoReviewer.WEB_SEARCH_THRESHOLD, 0.7)
 
+    def test_init_accepts_custom_web_search_threshold(self):
+        """AutoReviewer should allow per-instance web search thresholds."""
+        from mindforge.review.auto_reviewer import AutoReviewer
+        mock_adapter = Mock()
+        mock_adapter.model_name = "test"
+        reviewer = AutoReviewer(
+            judge_adapter=mock_adapter,
+            web_search_enabled=True,
+            web_search_threshold=0.4,
+        )
+        self.assertEqual(reviewer.web_search_threshold, 0.4)
+
     def test_init_without_judge_adapter_auto_detects(self):
         """AutoReviewer without judge_adapter should auto-detect (may return None)."""
         from mindforge.review.auto_reviewer import AutoReviewer
@@ -357,6 +369,26 @@ class TestReviewEntryUncertainWebSearch(unittest.TestCase):
         self.assertEqual(result["web_source"]["source_url"], "https://example.com/math")
         self.assertIn("4", result["web_source"]["snippet"])
 
+    def test_custom_threshold_controls_web_search_trigger(self):
+        """Configured threshold should decide whether uncertain answers trigger web search."""
+        from mindforge.review.auto_reviewer import AutoReviewer
+        mock_adapter = Mock()
+        mock_adapter.model_name = "test"
+        mock_adapter.ask.return_value = (
+            '{"correct": true, "confidence": 0.5, "explanation": "Probably right."}'
+        )
+        reviewer = AutoReviewer(
+            judge_adapter=mock_adapter,
+            web_search_enabled=True,
+            web_search_threshold=0.4,
+        )
+        reviewer._web_search = Mock()
+
+        entry = {"prompt": "Q?", "chosen": "A.", "rejected": "R."}
+        reviewer.review_entry(entry)
+
+        reviewer._web_search.assert_not_called()
+
 
 # ═══════════════════════════════════════════════════════════════════
 # _web_search Function Tests
@@ -467,6 +499,73 @@ class TestWebSearch(unittest.TestCase):
         for key in ["found", "answer", "source_url", "snippet"]:
             self.assertIn(key, result)
 
+    def test_web_search_extracts_answer_content_from_result_page(self):
+        """_web_search should use result page body content, not DuckDuckGo link text."""
+        from mindforge.review import auto_reviewer
+
+        search_html = """
+        <html><body>
+          <a href="https://example.com/math">Misleading DuckDuckGo result title</a>
+          <tr><td class="result-snippet">Snippet says the answer might be 5.</td></tr>
+        </body></html>
+        """
+        page_html = """
+        <html><head><title>Math facts</title></head><body>
+          <main>
+            <p>Two plus two equals four because adding two pairs creates a total of four items.</p>
+          </main>
+        </body></html>
+        """
+
+        fake_requests = Mock()
+        fake_requests.post.return_value = Mock(status_code=200, text=search_html)
+        fake_requests.get.return_value = Mock(status_code=200, text=page_html)
+        fake_requests.exceptions.Timeout = TimeoutError
+
+        with patch.object(auto_reviewer, "requests", fake_requests):
+            result = self.reviewer._web_search("What is 2+2?")
+
+        self.assertTrue(result["found"])
+        self.assertEqual(result["source_url"], "https://example.com/math")
+        self.assertIn("equals four", result["answer"])
+        self.assertNotIn("Misleading DuckDuckGo", result["answer"])
+
+    def test_web_search_fetches_top_three_pages_and_ranks_candidates(self):
+        """_web_search should rank extracted answers from the top 3 result pages."""
+        from mindforge.review import auto_reviewer
+
+        search_html = """
+        <html><body>
+          <a href="https://example.com/one">One</a>
+          <a href="https://example.com/two">Two</a>
+          <a href="https://example.com/three">Three</a>
+          <a href="https://example.com/four">Four</a>
+        </body></html>
+        """
+        pages = [
+            Mock(status_code=200, text="<html><body><p>France has many large cities, including Lyon.</p></body></html>"),
+            Mock(status_code=200, text="<html><body><p>Paris is the capital of France.</p></body></html>"),
+            Mock(status_code=200, text="<html><body><p>Berlin is the capital of Germany.</p></body></html>"),
+        ]
+
+        fake_requests = Mock()
+        fake_requests.post.return_value = Mock(status_code=200, text=search_html)
+        fake_requests.get.side_effect = pages
+        fake_requests.exceptions.Timeout = TimeoutError
+
+        with patch.object(auto_reviewer, "requests", fake_requests):
+            result = self.reviewer._web_search("What is the capital of France?")
+
+        self.assertTrue(result["found"])
+        self.assertEqual(fake_requests.get.call_count, 3)
+        for call in fake_requests.get.call_args_list:
+            self.assertEqual(call.kwargs["timeout"], 5)
+        self.assertEqual(result["source_url"], "https://example.com/two")
+        self.assertIn("Paris is the capital of France", result["answer"])
+        self.assertIn("candidates", result)
+        self.assertGreaterEqual(len(result["candidates"]), 3)
+        self.assertTrue(all("confidence" in candidate for candidate in result["candidates"]))
+
 
 # ═══════════════════════════════════════════════════════════════════
 # review_batch Tests
@@ -537,8 +636,10 @@ class TestReviewBatch(unittest.TestCase):
         """review_batch should handle entries with different judge responses."""
         # First entry correct, second incorrect
         responses = iter([
-            '{"correct": true, "confidence": 0.9, "explanation": "Correct."}',
-            '{"correct": false, "confidence": 0.2, "explanation": "Wrong."}',
+            '{"correct": true, "confidence": 0.9, "explanation": "Chosen correct."}',
+            '{"correct": false, "confidence": 0.9, "explanation": "Rejected wrong."}',
+            '{"correct": false, "confidence": 0.2, "explanation": "Chosen wrong."}',
+            '{"correct": false, "confidence": 0.2, "explanation": "Rejected wrong."}',
         ])
         self.mock_adapter.ask.side_effect = lambda *a, **kw: next(responses)
 
@@ -609,12 +710,82 @@ class TestAutoReviewerInternalMethods(unittest.TestCase):
         prompt = self.reviewer._build_judge_prompt("Q?", "A.", "The answer is B.")
         self.assertIn("The answer is B.", prompt)
 
+    def test_build_judge_prompt_requests_reasoning_field(self):
+        """_build_judge_prompt should request explicit reasoning before verdict fields."""
+        prompt = self.reviewer._build_judge_prompt("Q?", "A.", None)
+        self.assertIn('"reasoning"', prompt)
+        self.assertLess(prompt.index('"reasoning"'), prompt.index('"correct"'))
+        self.assertIn("step-by-step", prompt.lower())
+
     def test_parse_judge_response_json(self):
         """_parse_judge_response should parse valid JSON."""
         response = '{"correct": true, "confidence": 0.9, "explanation": "Correct."}'
         result = self.reviewer._parse_judge_response(response)
         self.assertTrue(result["correct"])
         self.assertAlmostEqual(result["confidence"], 0.9)
+
+    def test_parse_judge_response_json_reasoning(self):
+        """_parse_judge_response should preserve explicit reasoning."""
+        response = (
+            '{"reasoning": "Step 1: compare facts. Step 2: verdict.", '
+            '"correct": true, "confidence": 0.9, "explanation": "Correct."}'
+        )
+        result = self.reviewer._parse_judge_response(response)
+        self.assertIn("compare facts", result["reasoning"])
+
+    def test_cross_verify_flags_chosen_wrong_rejected_right_for_edit(self):
+        """_cross_verify should flag when rejected is better than chosen."""
+        responses = iter([
+            '{"reasoning": "Chosen contradicts the facts.", "correct": false, "confidence": 0.92, "explanation": "Chosen wrong."}',
+            '{"reasoning": "Rejected matches the facts.", "correct": true, "confidence": 0.88, "explanation": "Rejected right."}',
+        ])
+        self.mock_adapter.ask.side_effect = lambda *a, **kw: next(responses)
+
+        result = self.reviewer._cross_verify("What is 2+2?", "5", "4")
+
+        self.assertFalse(result["cross_check_passed"])
+        self.assertTrue(result["should_edit"])
+        self.assertFalse(result["chosen_verdict"]["correct"])
+        self.assertTrue(result["rejected_verdict"]["correct"])
+        self.assertEqual(self.mock_adapter.ask.call_count, 2)
+
+    def test_review_entry_detailed_returns_cross_check_fields(self):
+        """review_entry_detailed should include reasoning and independent verdicts."""
+        responses = iter([
+            '{"reasoning": "Chosen is five, not four.", "correct": false, "confidence": 0.9, "explanation": "Chosen wrong."}',
+            '{"reasoning": "Rejected is four.", "correct": true, "confidence": 0.9, "explanation": "Rejected right."}',
+        ])
+        self.mock_adapter.ask.side_effect = lambda *a, **kw: next(responses)
+
+        result = self.reviewer.review_entry_detailed({
+            "prompt": "What is 2+2?",
+            "chosen": "5",
+            "rejected": "4",
+        })
+
+        self.assertEqual(result["action"], "edit")
+        self.assertEqual(result["edited_chosen"], "4")
+        self.assertEqual(result["edited_rejected"], "5")
+        for key in ["reasoning", "chosen_verdict", "rejected_verdict", "cross_check_passed"]:
+            self.assertIn(key, result)
+        self.assertFalse(result["cross_check_passed"])
+
+    def test_review_entry_preserves_legacy_shape(self):
+        """review_entry should keep returning the original public result keys only."""
+        self.mock_adapter.ask.return_value = (
+            '{"reasoning": "Answer is supported.", "correct": true, "confidence": 0.9, "explanation": "Correct."}'
+        )
+
+        result = self.reviewer.review_entry({
+            "prompt": "What is 2+2?",
+            "chosen": "4",
+            "rejected": "5",
+        })
+
+        self.assertEqual(
+            set(result.keys()),
+            {"action", "confidence", "explanation", "edited_chosen", "edited_rejected", "web_source"},
+        )
 
     def test_parse_judge_response_text_correct(self):
         """_parse_judge_response should infer 'correct' from text."""

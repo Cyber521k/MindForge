@@ -1,0 +1,1263 @@
+# MindForge Expanded Taxonomy Proposal
+# ========================================
+# Research Date: 2026-06-27
+# Status: PROPOSAL — not yet integrated into taxonomy/subjects.yaml
+#
+# Context:
+#   MindForge currently has 110 subjects across 10 domains (57 MMLU + 53 custom).
+#   Original MMLU benchmarks (GSM8K, MMLU, HellaSwag) are saturated — frontier
+#   models score >88% on MMLU, >95% on HellaSwag, >94% on GPQA Diamond.
+#   This proposal expands the taxonomy to match 2026 frontier LLM intelligence
+#   levels, targeting capabilities that still differentiate top models:
+#   - Humanity's Last Exam (HLE): best model ~45%, human experts ~90%
+#   - SWE-bench Pro/SEAL: best model ~46% (vs 81% on saturated SWE-bench Verified)
+#   - ARC-AGI-3: frontier LLMs <1%
+#   - GAIA agentic: ~75% (humans 92%)
+#   - Multimodal reasoning (EMMA, MMMU): significant gaps remain
+#
+# Design Principles:
+#   1. Every new domain maps to a capability gap visible in 2026 benchmarks
+#   2. Subjects are granular enough for targeted probing but broad enough for
+#      question generation (5-15 subjects per domain, matching MMLU granularity)
+#   3. Subject names use snake_case to match existing taxonomy convention
+#   4. Each subject includes a description suitable for question_gen.py
+#   5. Existing 10 domains are preserved — new domains are additive
+#   6. Cross-domain subjects (e.g., "mathematical_reasoning") live in their
+#      primary domain, not duplicated across domains
+#
+# Proposed Structure: 22 domains (10 existing + 12 new), ~260 subjects total
+# New domains add ~150 subjects
+
+meta:
+  proposal_date: "2026-06-27"
+  current_state:
+    domains: 10
+    subjects: 110
+    mmlu_subjects: 57
+    custom_subjects: 53
+  proposed_state:
+    domains: 22
+    subjects: ~260
+    new_domains: 12
+    new_subjects: ~150
+  research_sources:
+    - "Kili Technology: AI Benchmarks 2026"
+    - "Medium (Milind Nair): LLM Evaluation in 2026"
+    - "LLM Stats: AI Benchmarks 2026"
+    - "DataVLab: LLM Benchmarks 2026"
+    - "Iternal AI: LLM Selection Guide 2026"
+    - "HuggingFace: Open LLM Leaderboard"
+    - "Center for AI Safety: Humanity's Last Exam (Nature, Jan 2026)"
+    - "OpenAI: SWE-bench Pro / SEAL audit"
+    - "Epoch AI: LiveCodeBench"
+    - "ARC Prize: ARC-AGI-3"
+
+# ============================================================
+# EXISTING DOMAINS (unchanged — listed for reference)
+# ============================================================
+
+existing_domains:
+  STEM:
+    subject_count: 14
+    subjects:
+      - abstract_algebra
+      - astronomy
+      - college_biology
+      - college_chemistry
+      - college_computer_science
+      - college_mathematics
+      - college_physics
+      - formal_logic
+      - high_school_biology
+      - high_school_chemistry
+      - high_school_computer_science
+      - high_school_mathematics
+      - high_school_physics
+      - machine_learning
+    note: >
+      Preserved as-is. Overlaps with new Mathematical_Reasoning and
+      Scientific_Reasoning domains, but these are MMLU-backed subjects
+      with dataset questions. New reasoning domains use custom question
+      generation and test deeper cognitive patterns.
+
+  Humanities:
+    subject_count: 12
+    subjects:
+      - high_school_european_history
+      - high_school_us_history
+      - high_school_world_history
+      - international_law
+      - jurisprudence
+      - logical_fallacies
+      - moral_disputes
+      - moral_scenarios
+      - philosophy
+      - prehistory
+      - professional_law
+      - world_religions
+    note: Preserved as-is.
+
+  Social_Science:
+    subject_count: 11
+    subjects:
+      - econometrics
+      - high_school_geography
+      - high_school_government_and_politics
+      - high_school_macroeconomics
+      - high_school_microeconomics
+      - high_school_psychology
+      - human_aging
+      - public_relations
+      - security_studies
+      - sociology
+      - us_foreign_policy
+    note: Preserved as-is.
+
+  Professional:
+    subject_count: 13
+    subjects:
+      - business_ethics
+      - clinical_knowledge
+      - college_medicine
+      - computer_security
+      - conceptual_physics
+      - electrical_engineering
+      - elementary_mathematics
+      - global_facts
+      - high_school_statistics
+      - miscellaneous
+      - professional_accounting
+      - professional_medicine
+      - virology
+    note: Preserved as-is.
+
+  Other:
+    subject_count: 7
+    subjects:
+      - anatomy
+      - college_education
+      - human_sexuality
+      - marketing
+      - medical_genetics
+      - nutrition
+      - professional_psychology
+    note: Preserved as-is.
+
+  Programming_Languages:
+    subject_count: 16
+    subjects:
+      - python
+      - javascript
+      - typescript
+      - rust
+      - go
+      - cpp
+      - java
+      - csharp
+      - ruby
+      - swift
+      - kotlin
+      - haskell
+      - elixir
+      - zig
+      - nim
+      - lua
+    note: Preserved as-is. Tests language knowledge, not engineering.
+
+  Agent_Frameworks:
+    subject_count: 12
+    subjects:
+      - hermes_agent
+      - pi_agent
+      - openclaw
+      - clawcode
+      - autogpt
+      - crewai
+      - langchain
+      - llamaindex
+      - autogen
+      - metagpt
+      - chatdev
+      - babyagi
+    note: Preserved as-is. Tests framework knowledge, not agentic capability.
+
+  Blockchain_Web3:
+    subject_count: 14
+    subjects:
+      - solidity
+      - vyper
+      - move
+      - cairo
+      - solana
+      - cosmos
+      - clarity
+      - plutus
+      - foundry
+      - hardhat
+      - web3js
+      - ethersjs
+      - defi
+      - nft
+    note: Preserved as-is.
+
+  DevOps_Infrastructure:
+    subject_count: 7
+    subjects:
+      - docker
+      - kubernetes
+      - terraform
+      - ci_cd
+      - cloud_aws
+      - cloud_gcp
+      - cloud_azure
+    note: Preserved as-is. Expanded by Code_Engineering domain.
+
+  Security_Cryptography:
+    subject_count: 4
+    subjects:
+      - cryptography
+      - secure_coding
+      - pentesting
+      - network_security
+    note: Preserved as-is.
+
+# ============================================================
+# NEW DOMAINS
+# ============================================================
+
+new_domains:
+
+  # ----------------------------------------------------------
+  # 1. ADVANCED REASONING
+  # Benchmark gap: HLE holds best model to ~45% (human experts ~90%)
+  # GPQA Diamond saturating at 94% — need deeper reasoning tests
+  # ARC-AGI-3: frontier LLMs <1% (novel abstraction & pattern induction)
+  # ----------------------------------------------------------
+  Advanced_Reasoning:
+    subject_count: 14
+    benchmark_gaps:
+      - "Humanity's Last Exam: best model ~45%, human experts ~90%"
+      - "ARC-AGI-3: frontier LLMs <1%, simple CNNs 12.5%"
+      - "GPQA Diamond: saturating at 92-94%"
+      - "BBH (Big Bench Hard): still differentiating at 80-90%"
+    subjects:
+      - propositional_logic:
+          description: >
+            Formal logic using propositional calculus — truth tables, logical
+            equivalences, De Morgan's laws, modus ponens/tollens, resolution,
+            CNF/DNF conversion, satisfiability (SAT), and proving validity of
+            logical arguments. Tests symbolic manipulation and rule application.
+      - first_order_logic:
+          description: >
+            Predicate logic with quantifiers (∀, ∃), predicates, functions,
+            and constants. Covers unification, skolemization, Herbrand's theorem,
+            resolution refutation, and translating natural language to FOL.
+            Tests formal reasoning about relations and quantification.
+      - causal_reasoning:
+          description: >
+            Reasoning about cause and effect — identifying causal relationships
+            from observational data, counterfactual reasoning ("what would have
+            happened if X had not occurred"), do-calculus, causal graphs (DAGs),
+            confounders, mediators, and Simpson's paradox. Tests understanding
+            of causation vs. correlation.
+      - analogical_reasoning:
+          description: >
+            Mapping relational structure from a source domain to a target domain.
+            Includes proportional analogies (A:B::C:D), structural alignment,
+            surface vs. deep similarity, and analogical transfer in problem-solving.
+            Tests abstract pattern matching across disparate domains.
+      - abductive_reasoning:
+          description: >
+            Inference to the best explanation — given observations, determine the
+            most likely explanation. Covers hypothesis generation, Occam's razor,
+            eliminative abduction, and diagnostic reasoning. Tests ability to
+            form plausible explanations from incomplete information.
+      - inductive_reasoning:
+          description: >
+            Generalizing from specific instances to broader rules. Covers pattern
+            completion, sequence extrapolation, analogical series, Raven's Progressive
+            Matrices, and the problem of induction. Tests ability to identify and
+            apply patterns from limited examples — directly relevant to ARC-AGI.
+      - deductive_reasoning:
+          description: >
+            Drawing logically certain conclusions from premises. Covers syllogisms,
+            conditional reasoning, proof by contradiction, and multi-step logical
+            chains. Tests ability to follow valid inference rules without
+            content-based shortcuts.
+      - spatial_reasoning:
+          description: >
+            Mental manipulation of 2D and 3D spatial relationships — mental rotation,
+            folding/unfolding, cross-sections, mirror images, topological reasoning,
+            and navigation. Tests non-verbal reasoning critical for multimodal and
+            embodied AI.
+      - temporal_reasoning:
+          description: >
+            Reasoning about time — event ordering, duration, Allen's interval algebra,
+            temporal constraints, before/after/during relationships, and planning
+            with deadlines. Tests understanding of temporal sequences and causality.
+      - counterfactual_reasoning:
+          description: >
+            Reasoning about alternative realities — "what if X had been different?"
+            Covers nearest-possible-world semantics, causal counterfactuals,
+            structural causal models, and counterfactual evaluation in decision theory.
+      - nonmonotonic_reasoning:
+          description: >
+            Reasoning where conclusions can be retracted with new information —
+            default logic, circumscription, autoepistemic logic, and defeasible
+            reasoning. Tests handling of incomplete and revisable knowledge, critical
+            for real-world agent decision-making.
+      - combinatorial_reasoning:
+          description: >
+            Systematic enumeration and counting of discrete structures — permutations,
+            combinations, generating functions, inclusion-exclusion, Pigeonhole
+            principle, and graph enumeration. Tests ability to reason about
+            discrete structures and count possibilities.
+      - constraint_satisfaction:
+          description: >
+            Solving problems with variables subject to constraints — CSP formulation,
+            backtracking, constraint propagation, arc consistency, and real-world
+            scheduling/packing problems. Tests systematic search and optimization.
+      - abstract_pattern_induction:
+          description: >
+            Discovering hidden rules from examples and applying them to novel cases —
+            the core of ARC-AGI. Covers grid-based pattern tasks, rule induction
+            from input-output pairs, abstraction and generalization. Tests the
+            ability to learn novel abstractions from very few examples.
+
+  # ----------------------------------------------------------
+  # 2. AGENTIC CAPABILITIES
+  # Benchmark gap: GAIA ~75% (humans 92%), τ2-Bench dual-control
+  # degradation, ARC-AGI-3 <1%
+  # ----------------------------------------------------------
+  Agentic_Capabilities:
+    subject_count: 15
+    benchmark_gaps:
+      - "GAIA: top agents ~75%, humans 92%"
+      - "τ2-Bench: behavior degrades in dual-control scenarios"
+      - "AgentBench: OS/database/web tasks still <60% for most agents"
+      - "WebArena: <40% success on complex web interactions"
+    subjects:
+      - tool_selection:
+          description: >
+            Choosing the right tool for a task from an available set. Covers
+            understanding tool descriptions, matching tool capabilities to task
+            requirements, composing tool sequences, and recognizing when no
+            suitable tool exists. Tests the core decision of "which tool to call."
+      - function_calling:
+          description: >
+            Constructing valid API/function calls — parameter extraction from
+            natural language, type matching, argument ordering, JSON schema
+            compliance, handling optional/required parameters, and error recovery
+            from malformed calls. Tests practical API interaction.
+      - multi_step_planning:
+          description: >
+            Decomposing a complex goal into an ordered sequence of sub-tasks.
+            Covers goal decomposition, dependency analysis, plan representation
+            (DAGs, trees), plan revision on failure, and trade-offs between
+            plan depth and reliability. Tests the planning phase of agent loops.
+      - plan_execution:
+          description: >
+            Executing a plan step-by-step while monitoring progress and handling
+            failures. Covers state tracking, step verification, error recovery
+            strategies (retry, replan, skip), and knowing when to stop. Tests
+            the act-observe-reflect loop of autonomous agents.
+      - self_reflection:
+          description: >
+            Evaluating one's own outputs and processes — detecting errors in
+            prior reasoning, recognizing knowledge gaps, calibrating confidence,
+            and deciding when to seek external help. Tests metacognitive abilities
+            critical for autonomous operation.
+      - error_recovery:
+          description: >
+            Recovering from execution failures — diagnosing error causes, trying
+            alternative approaches, handling rate limits/timeouts, and graceful
+            degradation. Tests resilience and adaptive behavior when plans fail.
+      - multi_agent_coordination:
+          description: >
+            Coordinating with other agents or humans — task delegation, role
+            assignment, communication protocols, shared state management, conflict
+            resolution, and result aggregation. Tests collaborative intelligence.
+      - web_navigation:
+          description: >
+            Navigating web interfaces to accomplish tasks — understanding page
+            structure, clicking elements, filling forms, handling popups/auth,
+            pagination, and extracting information. Tests Browser-Use and
+            web-agent capabilities (WebArena, GAIA web tasks).
+      - file_system_operations:
+          description: >
+            Managing files and directories programmatically — reading/writing files,
+            path manipulation, glob patterns, searching file contents, permissions,
+            and directory traversal. Tests terminal-based agent skills.
+      - code_execution_safety:
+          description: >
+            Executing generated code safely — sandboxing, understanding side
+            effects, resource limits, output capture, and knowing when execution
+            is dangerous. Tests judgment about code safety in agent contexts.
+      - state_management:
+          description: >
+            Maintaining and updating state across multi-step interactions —
+            context window management, state persistence, session tracking,
+            memory retrieval, and deciding what to remember vs. forget. Tests
+            long-horizon task management.
+      - environment_perception:
+          description: >
+            Understanding the current environment state — parsing API responses,
+            reading logs, interpreting terminal output, understanding error messages,
+            and building a mental model of the operating context. Tests the
+            observe phase of agent loops.
+      - task_decomposition:
+          description: >
+            Breaking complex tasks into independently solvable sub-tasks —
+            identifying parallelizable vs. sequential components, defining clear
+            sub-task boundaries, and estimating sub-task difficulty. Tests
+            problem structuring abilities.
+      - human_in_the_loop:
+          description: >
+            Knowing when and how to ask humans for help — recognizing ambiguity
+            that requires clarification, formulating good questions, presenting
+            options clearly, and incorporating human feedback. Tests the
+            boundary between autonomy and human escalation.
+      - agent_tool_composition:
+          description: >
+            Combining multiple tools in novel ways to solve problems not solvable
+            by any single tool — chaining outputs, parallel tool calls, conditional
+            tool selection, and building workflows. Tests creative tool use.
+
+  # ----------------------------------------------------------
+  # 3. CODE ENGINEERING
+  # Benchmark gap: SWE-bench Verified saturating ~81%,
+  # but SWE-bench Pro/SEAL only ~46% (same model, half the score)
+  # LiveCodeBench differentiates at 70-92%
+  # ----------------------------------------------------------
+  Code_Engineering:
+    subject_count: 15
+    benchmark_gaps:
+      - "SWE-bench Verified: ~81% (saturating, contaminated)"
+      - "SWE-bench Pro/SEAL: ~46% (same models, harder harness)"
+      - "LiveCodeBench: 70-92% (fresh problems post-cutoff)"
+      - "Terminal-Bench 2.0: DevOps workflows still hard"
+    subjects:
+      - system_design:
+          description: >
+            Designing software systems architecture — choosing patterns (MVC,
+            microservices, event-driven), defining component interfaces, data flow
+            diagrams, scalability considerations, CAP theorem trade-offs, and
+            technology selection. Tests high-level engineering judgment.
+      - api_design:
+          description: >
+            Designing RESTful and GraphQL APIs — resource modeling, HTTP methods,
+            status codes, versioning, pagination, authentication, rate limiting,
+            and OpenAPI specification. Tests ability to design clean interfaces.
+      - database_design:
+          description: >
+            Designing database schemas — normalization (1NF-BCNF), indexing strategies,
+            relationships (1:1, 1:N, M:N), partitioning, choosing SQL vs. NoSQL,
+            and query optimization. Tests data modeling and storage reasoning.
+      - debugging_strategies:
+          description: >
+            Systematic approaches to finding and fixing bugs — binary search
+            debugging, hypothesis-driven debugging, reading stack traces, using
+            debuggers (pdb, gdb, Chrome DevTools), and root cause analysis.
+            Tests diagnostic reasoning about code failures.
+      - code_review:
+          description: >
+            Evaluating code quality — identifying bugs, security vulnerabilities,
+            performance issues, maintainability problems, style violations, and
+            suggesting improvements. Tests ability to read and critique code
+            critically, as in GitHub PR reviews.
+      - testing_strategies:
+          description: >
+            Designing effective tests — unit testing, integration testing, property-based
+            testing, mocking, test coverage analysis, TDD workflows, edge case
+            identification, and choosing what to test. Tests quality assurance reasoning.
+      - refactoring:
+          description: >
+            Improving code structure without changing behavior — extracting methods,
+            simplifying conditionals, eliminating duplication, renaming for clarity,
+            design pattern application, and managing technical debt. Tests code
+            transformation skills.
+      - performance_optimization:
+          description: >
+            Identifying and fixing performance bottlenecks — algorithmic complexity
+            analysis, profiling, memory optimization, caching strategies, database
+            query optimization, and latency reduction. Tests ability to reason
+            about speed and resource usage.
+      - design_patterns:
+          description: >
+            Software design patterns — creational (Factory, Builder, Singleton),
+            structural (Adapter, Decorator, Facade), behavioral (Observer, Strategy,
+            Command), and architectural patterns (MVC, Repository, CQRS). Tests
+            knowledge of reusable engineering solutions.
+      - concurrency_programming:
+          description: >
+            Writing concurrent and parallel code — threads, locks, mutexes,
+            semaphores, race conditions, deadlocks, async/await, actors model,
+            and concurrent data structures. Tests reasoning about parallel execution.
+      - distributed_systems:
+          description: >
+            Designing distributed systems — consensus algorithms (Paxos, Raft),
+            replication, partition tolerance, distributed transactions, eventual
+            consistency, leader election, and fault tolerance. Tests understanding
+            of multi-node system challenges.
+      - code_security:
+          description: >
+            Identifying security vulnerabilities in code — SQL injection, XSS,
+            CSRF, path traversal, deserialization attacks, dependency vulnerabilities,
+            and OWASP Top 10. Tests ability to spot security flaws during code
+            review and avoid them in new code.
+      - build_systems:
+          description: >
+            Understanding build tools and dependency management — Make, CMake,
+            Bazel, Gradle, Maven, npm/pnpm, pip, cargo, and monorepo build
+            strategies. Tests knowledge of compilation pipelines and dependency
+            resolution.
+      - version_control_workflows:
+          description: >
+            Git workflows and collaboration — branching strategies (GitFlow,
+            trunk-based), merge vs. rebase, conflict resolution, cherry-picking,
+            bisect for debugging, submodules, and PR lifecycle. Tests practical
+            version control reasoning.
+      - code_generation_from_spec:
+          description: >
+            Generating working code from natural language specifications or
+            pseudocode — understanding requirements, choosing appropriate
+            data structures, handling edge cases, and producing compilable
+            code. Tests the core capability measured by HumanEval and
+            LiveCodeBench.
+
+  # ----------------------------------------------------------
+  # 4. AI/ML KNOWLEDGE
+  # Benchmark gap: ML knowledge on MMLU saturated;
+  # need deeper coverage of training, evaluation, deployment, ethics
+  # ----------------------------------------------------------
+  AI_ML_Knowledge:
+    subject_count: 14
+    benchmark_gaps:
+      - "MMLU machine_learning: saturated at >90%"
+      - "Need deeper coverage of training, eval, deployment, ethics"
+      - "HuggingFace Open LLM Leaderboard: differentiation at harder tasks"
+    subjects:
+      - transformer_architecture:
+          description: >
+            Deep understanding of Transformer architecture — self-attention,
+            multi-head attention, positional encoding, layer normalization, feed-forward
+            networks, encoder-decoder vs. decoder-only, and variants (RoPE, ALiBi,
+            sliding window attention). Tests architectural knowledge.
+      - training_methodology:
+          description: >
+            LLM training pipeline — pretraining (tokenization, data mixing, scaling
+            laws, batch size, learning rate schedules), post-training (SFT, DPO, RLHF,
+            PPO, GRPO), and curriculum learning. Tests understanding of how models
+            are built.
+      - fine_tuning_techniques:
+          description: >
+            Parameter-efficient fine-tuning — LoRA, QLoRA, adapters, prefix tuning,
+            prompt tuning, full fine-tuning trade-offs, and instruction tuning. Tests
+            knowledge of adapting pretrained models to specific tasks.
+      - evaluation_metrics:
+          description: >
+            Metrics for evaluating LLMs — perplexity, BLEU, ROUGE, exact match,
+            F1, MMLU/GPQA benchmarking, human evaluation, LLM-as-judge, and
+            calibration metrics. Tests understanding of how to measure model quality.
+      - model_quantization:
+          description: >
+            Reducing model precision for efficient deployment — INT8, INT4, GPTQ,
+            AWQ, GGUF, bitsandbytes, and trade-offs between speed, memory, and
+            quality. Tests knowledge of inference optimization.
+      - inference_optimization:
+          description: >
+            Making LLM inference faster and cheaper — KV caching, speculative
+            decoding, batching, vLLM, tensor parallelism, pipeline parallelism,
+            and PagedAttention. Tests understanding of serving infrastructure.
+      - reinforcement_learning:
+          description: >
+            RL fundamentals and LLM applications — MDPs, policy gradient, PPO,
+            reward modeling, RLHF, DPO, GRPO, and alignment tax. Tests understanding
+            of preference optimization and alignment methods.
+      - data_curation:
+          description: >
+            Preparing training data — data deduplication, quality filtering, toxic
+            content removal, synthetic data generation, data augmentation, and
+            dataset contamination detection. Tests knowledge of data pipeline design.
+      - model_safety_alignment:
+          description: >
+            Making models safe and aligned — red teaming, jailbreak prevention,
+            constitutional AI, safety filters, RLHF for harmlessness, refusal
+            training, and safety evals. Tests understanding of AI safety practices.
+      - ai_ethics:
+          description: >
+            Ethical considerations in AI — bias and fairness, transparency,
+            accountability, privacy, consent, intellectual property, environmental
+            impact, and AI governance frameworks. Tests reasoning about ethical
+            implications of AI deployment.
+      - multimodal_architectures:
+          description: >
+            Vision-language models and multimodal AI — CLIP, BLIP, LLaVA, Flamingo,
+            vision encoders, cross-attention fusion, and unified multimodal models.
+            Tests understanding of architectures that process multiple modalities.
+      - rag_systems:
+          description: >
+            Retrieval-Augmented Generation — document chunking, embedding models,
+            vector databases (Pinecone, Weaviate, Chroma), retrieval strategies
+            (dense, sparse, hybrid), reranking, and context window management.
+            Tests knowledge of RAG pipeline design.
+      - prompt_engineering:
+          description: >
+            Designing effective prompts — zero-shot, few-shot, chain-of-thought,
+            self-consistency, tree-of-thought, role-playing, system prompts, and
+            prompt templates. Tests practical prompt optimization skills.
+      - agent_architecture:
+          description: >
+            Designing LLM-based agent systems — ReAct loop, plan-and-execute,
+            reflection, memory systems, tool integration, multi-agent orchestration,
+            and human-in-the-loop patterns. Tests understanding of agent design.
+
+  # ----------------------------------------------------------
+  # 5. MULTIMODAL UNDERSTANDING
+  # Benchmark gap: MMMU, EMMA, DocVQA still differentiate
+  # Vision-language models lag on complex reasoning over images
+  # ----------------------------------------------------------
+  Multimodal_Understanding:
+    subject_count: 12
+    benchmark_gaps:
+      - "MMMU: best models ~65-70% (human ~85%)"
+      - "EMMA: organic multimodal reasoning still hard"
+      - "DocVQA: document understanding gaps"
+      - "Video-MME: video understanding still nascent"
+    subjects:
+      - image_understanding:
+          description: >
+            Interpreting visual content in images — object detection, scene
+            understanding, spatial relationships, OCR, reading charts/graphs,
+            and understanding diagrams. Tests VLM capabilities for static images.
+      - video_understanding:
+          description: >
+            Understanding temporal dynamics in video — action recognition, temporal
+            reasoning, causal chains across frames, summarizing video content, and
+            answering questions about video events. Tests temporal multimodal reasoning.
+      - audio_understanding:
+          description: >
+            Processing and understanding audio — speech recognition, speaker
+            identification, emotion detection, music analysis, sound classification,
+            and audio event detection. Tests audio-language model capabilities.
+      - chart_data_visualization:
+          description: >
+            Reading and interpreting data visualizations — bar charts, line graphs,
+            scatter plots, heatmaps, pie charts, reading axes, identifying trends,
+            and comparing data across visualizations. Tests quantitative visual literacy.
+      - document_understanding:
+          description: >
+            Understanding structured documents — tables, forms, multi-column layouts,
+            headers/footers, reading order, and extracting information from complex
+            document layouts. Tests document AI capabilities (DocVQA).
+      - cross_modal_reasoning:
+          description: >
+            Reasoning that requires integrating information across modalities —
+            matching text to images, answering questions that require both visual
+            and textual understanding, and cross-modal analogies. Tests EMMA-style
+            organic multimodal reasoning.
+      - spatial_visual_reasoning:
+          description: >
+            3D reasoning from 2D images — depth estimation, object orientation,
+            spatial relationships (above/below/behind), mental rotation from visual
+            input, and scene reconstruction. Tests 3D understanding from 2D.
+      - visual_question_answering:
+          description: >
+            Answering natural language questions about images — identifying objects,
+            counting, spatial reasoning, attribute identification, and multi-hop
+            reasoning over visual content. Tests VQA pipeline capabilities.
+      - diagrammatic_reasoning:
+          description: >
+            Reasoning with diagrams — flowcharts, circuit diagrams, UML, ER diagrams,
+            mind maps, and deriving conclusions from visual structural representations.
+            Tests ability to reason with structured visual notation.
+      - scene_understanding:
+          description: >
+            Holistic scene understanding — identifying the setting, activities,
+            relationships between objects and people, emotional context, and
+            narrative implication of a visual scene. Tests higher-order visual
+            comprehension beyond object detection.
+      - multimodal_generation:
+          description: >
+            Generating content across modalities — text-to-image, image editing,
+            text-to-video, audio generation, and understanding the quality and
+            limitations of generated multimodal content. Tests generative AI literacy.
+      - optical_character_understanding:
+          description: >
+            Reading text in natural images and documents — handwriting recognition,
+            text in the wild (signs, labels), multi-language OCR, and structured
+            text extraction from images. Tests text-vision intersection.
+
+  # ----------------------------------------------------------
+  # 6. LONG-CONTEXT RETRIEVAL AND SYNTHESIS
+  # Benchmark gap: Needle-in-haystack tests show degradation;
+  # multi-document synthesis still hard
+  # ----------------------------------------------------------
+  Long_Context_Retrieval:
+    subject_count: 10
+    benchmark_gaps:
+      - "Needle-in-haystack: performance degrades with context length"
+      - "Multi-document QA: synthesis across sources still <70%"
+      - "RAG triad (faithfulness, relevance, answer relevance) gaps"
+    subjects:
+      - information_retrieval:
+          description: >
+            Finding relevant information in large text corpora — keyword search,
+            semantic search, dense retrieval, BM25, hybrid search, and evaluating
+            retrieval precision/recall. Tests ability to locate relevant information.
+      - context_window_management:
+          description: >
+            Managing limited context windows — summarizing long documents, selecting
+            relevant passages, context ordering effects, lost-in-the-middle phenomenon,
+            and context compression. Tests understanding of context constraints.
+      - multi_document_synthesis:
+          description: >
+            Synthesizing information from multiple sources — identifying contradictions,
+            merging complementary information, resolving entity references, and
+            producing a coherent summary. Tests multi-source reasoning.
+      - needle_in_haystack:
+          description: >
+            Finding specific information embedded in a large context — recalling
+            a fact placed at various positions in a long document, and understanding
+            how retrieval accuracy degrades with context length. Tests long-context
+            retrieval precision.
+      - citation_verification:
+          description: >
+            Verifying that claims are supported by cited sources — checking if
+            information appears in the referenced source, detecting fabricated
+            citations, and ensuring faithful attribution. Tests source-grounding.
+      - long_document_summarization:
+          description: >
+            Summarizing long documents effectively — extractive vs. abstractive
+            summarization, hierarchical summarization, preserving key information,
+            and avoiding hallucination in summaries. Tests compression fidelity.
+      - rag_pipeline_reasoning:
+          description: >
+            End-to-end RAG reasoning — query understanding, retrieval strategy
+            selection, context relevance evaluation, answer faithfulness checking,
+            and knowing when retrieval is needed vs. using parametric knowledge.
+      - temporal_context_reasoning:
+          description: >
+            Reasoning about temporal information in context — understanding timelines,
+            resolving temporal references, tracking entity state changes over time
+            in a document, and answering when/while/before/after questions.
+      - cross_reference_resolution:
+          description: >
+            Resolving references across a long context — pronoun resolution, entity
+            tracking, acronym expansion, and connecting information mentioned in
+            different parts of a document. Tests coreference in long contexts.
+      - fact_verification:
+          description: >
+            Verifying claims against provided source material — checking if statements
+            are supported, contradicted, or not mentioned in the context, and
+            identifying subtle mismatches. Tests grounded fact-checking.
+
+  # ----------------------------------------------------------
+  # 7. CREATIVE TASKS
+  # Benchmark gap: Creative writing quality still differentiates;
+  # story coherence, character consistency, voice remain hard
+  # ----------------------------------------------------------
+  Creative_Tasks:
+    subject_count: 12
+    benchmark_gaps:
+      - "Creative writing: LLM outputs still lack human-level narrative coherence"
+      - "Poetry: meter, rhyme, and meaning integration gaps"
+      - "Dialogue: character voice consistency and subtext remain challenging"
+      - "Storytelling: long-form narrative arc and foreshadowing"
+    subjects:
+      - storytelling:
+          description: >
+            Constructing narratives — plot structure (three-act, hero's journey),
+            pacing, tension, narrative arcs, foreshadowing, and payoff. Tests
+            ability to create engaging, coherent long-form stories.
+      - poetry_composition:
+          description: >
+            Writing poetry with formal constraints — meter (iambic, trochaic),
+            rhyme schemes (ABAB, sonnet, villanelle), syllable counting, and
+            integrating meaning with form. Tests constrained creative writing.
+      - dialogue_writing:
+          description: >
+            Writing natural dialogue — character voice differentiation, subtext,
+            conversational flow, dialect/sociolect, and advancing plot through
+            speech. Tests ability to create distinct, believable character voices.
+      - creative_nonfiction:
+          description: >
+            Writing engaging factual narratives — personal essays, memoir, literary
+            journalism, narrative hooks, and balancing factual accuracy with
+            storytelling craft. Tests creative writing grounded in reality.
+      - world_building:
+          description: >
+            Designing fictional worlds — magic systems, political structures,
+            geography, economics, cultures, and internal consistency. Tests
+            systematic creative imagination and coherence.
+      - character_development:
+          description: >
+            Creating complex characters — motivation, arc, flaws, relationships,
+            voice consistency, and growth. Tests understanding of character psychology
+            and narrative purpose.
+      - humor_and_satire:
+          description: >
+            Writing comedy — timing, misdirection, wordplay, irony, satire,
+            parody, and understanding comedic structure. Tests one of the hardest
+            creative tasks for LLMs.
+      - persuasive_writing:
+          description: >
+            Writing to persuade — argumentation, rhetorical devices (ethos, pathos,
+            logos), audience analysis, counter-argument handling, and call-to-action.
+            Tests rhetoric and influence through writing.
+      - descriptive_prose:
+          description: >
+            Writing vivid descriptions — sensory details, figurative language
+            (metaphor, simile, personification), show-don't-tell, and atmosphere
+            creation. Tests literary craft and imagery.
+      - genre_conventions:
+          description: >
+            Understanding and applying genre conventions — science fiction, fantasy,
+            mystery, horror, romance, literary fiction. Tests knowledge of genre
+            expectations and ability to work within or subvert them.
+      - creative_constraints:
+          description: >
+            Writing under formal or content constraints — Oulipo techniques,
+            lipograms, constrained vocabularies, acrostics, and found poetry.
+            Tests creative problem-solving under restrictions.
+      - narrative_structure:
+          description: >
+            Understanding narrative structure techniques — non-linear timelines,
+            frame stories, unreliable narrators, parallel plots, and in medias res.
+            Tests structural storytelling knowledge.
+
+  # ----------------------------------------------------------
+  # 8. REAL-WORLD KNOWLEDGE
+  # Benchmark gap: Freshness-sensitive knowledge; pop culture,
+  # sports, entertainment; knowledge cutoff limitations
+  # ----------------------------------------------------------
+  Real_World_Knowledge:
+    subject_count: 12
+    benchmark_gaps:
+      - "Knowledge cutoff: models lack post-training events"
+      - "Pop culture: uneven coverage, rapidly changing"
+      - "Current events: temporal knowledge degradation"
+      - "Freshness-sensitive: sports scores, entertainment, news"
+    subjects:
+      - current_events:
+          description: >
+            Knowledge of recent world events — geopolitics, elections, natural
+            disasters, scientific breakthroughs, and major news stories. Tests
+            temporal knowledge and awareness of post-training events.
+      - pop_culture:
+          description: >
+            Knowledge of popular culture — movies, TV shows, music, internet trends,
+            memes, viral content, and cultural phenomena. Tests cultural literacy
+            and contemporary relevance.
+      - sports_knowledge:
+          description: >
+            Knowledge of sports — rules, teams, players, statistics, championships,
+            major leagues (NFL, NBA, MLB, Premier League, etc.), and historical
+            records. Tests sports domain knowledge.
+      - entertainment_industry:
+          description: >
+            Knowledge of the entertainment industry — film studios, streaming
+            platforms, production companies, award ceremonies, and industry
+            trends. Tests understanding of entertainment business.
+      - music_knowledge:
+          description: >
+            Knowledge of music — genres, artists, albums, music theory basics,
+            instruments, music history, and charts. Tests broad musical literacy.
+      - film_and_television:
+          description: >
+            Knowledge of cinema and TV — directors, actors, plot summaries,
+            production details, film techniques, and critical analysis. Tests
+            audiovisual cultural knowledge.
+      - video_game_culture:
+          description: >
+            Knowledge of video games — game titles, developers, platforms, genres,
+            gaming culture, esports, and industry trends. Tests gaming domain
+            knowledge.
+      - internet_culture:
+          description: >
+            Knowledge of internet culture — social media platforms, viral trends,
+            online communities, memes, internet history, and platform-specific
+            norms. Tests digital cultural literacy.
+      - celebrity_knowledge:
+          description: >
+            Knowledge of public figures — actors, musicians, athletes, politicians,
+            influencers, and their notable activities and relationships. Tests
+            biographical and cultural knowledge.
+      - food_and_cuisine:
+          description: >
+            Knowledge of food and cooking — cuisines by region, ingredients, cooking
+            techniques, culinary traditions, and food culture. Tests practical
+            cultural knowledge.
+      - travel_and_geography:
+          description: >
+            Knowledge of travel destinations, landmarks, cultural practices by
+            region, transportation, and practical geography. Tests world knowledge
+            for real-world planning.
+      - fashion_and_lifestyle:
+          description: >
+            Knowledge of fashion brands, trends, style history, and lifestyle
+            culture. Tests awareness of consumer and design culture.
+
+  # ----------------------------------------------------------
+  # 9. MATHEMATICAL REASONING
+  # Benchmark gap: GSM8K saturated (99%), MATH-500 at 96%,
+  # but competition math (AMC/AIME/IMO) still hard;
+  # formal proofs and applied math remain challenging
+  # ----------------------------------------------------------
+  Mathematical_Reasoning:
+    subject_count: 13
+    benchmark_gaps:
+      - "GSM8K: 99% (saturated)"
+      - "MATH-500: 96% (approaching saturation)"
+      - "AIME/IMO: frontier models 10-30% (significant gap)"
+      - "Formal theorem proving: still nascent"
+    subjects:
+      - algebraic_reasoning:
+          description: >
+            Algebraic manipulation and reasoning — solving equations, inequalities,
+            polynomials, factoring, quadratic equations, systems of equations, and
+            algebraic identities. Tests core algebraic problem-solving.
+      - geometric_reasoning:
+          description: >
+            Geometric problem-solving — Euclidean geometry proofs, area/volume
+            calculations, coordinate geometry, trigonometric identities, and
+            geometric transformations. Tests spatial-mathematical reasoning.
+      - number_theory:
+          description: >
+            Properties of integers — divisibility, primes, modular arithmetic,
+            Diophantine equations, Fermat's Little Theorem, GCD/LCM, and the
+            fundamental theorem of arithmetic. Tests number-theoretic reasoning.
+      - combinatorics:
+          description: >
+            Counting and arrangement — permutations, combinations, generating
+            functions, recurrence relations, inclusion-exclusion, and graph theory
+            basics. Tests discrete mathematical reasoning.
+      - probability_theory:
+          description: >
+            Probability reasoning — Bayes' theorem, conditional probability,
+            random variables, expected value, distributions, and combinatorial
+            probability. Tests probabilistic thinking.
+      - mathematical_proofs:
+          description: >
+            Constructing and verifying mathematical proofs — direct proof, proof
+            by induction, proof by contradiction, proof by cases, and understanding
+            what constitutes a valid proof. Tests formal mathematical reasoning.
+      - competition_mathematics:
+          description: >
+            Problems from mathematical olympiads — AMC, AIME, Putnam, and IMO-style
+            problems requiring creative insight, non-standard techniques, and
+            multi-step reasoning. Tests the hardest math benchmarks (AIME/IMO level).
+      - real_analysis:
+          description: >
+            Calculus and analysis — limits, continuity, derivatives, integrals,
+            sequences and series, convergence tests, and the formal foundations
+            of calculus. Tests rigorous mathematical analysis.
+      - linear_algebra:
+          description: >
+            Vector spaces, matrices, linear transformations, eigenvalues/eigenvectors,
+            determinants, inner product spaces, and SVD. Tests understanding of
+            linear structures critical for ML and engineering.
+      - discrete_mathematics:
+          description: >
+            Discrete structures — set theory, relations, functions, graph theory,
+            Boolean algebra, logic, and combinatorial structures. Tests reasoning
+            about discrete objects.
+      - mathematical_optimization:
+          description: >
+            Optimization theory — linear programming, convex optimization, gradient
+            descent, Lagrange multipliers, and constrained optimization. Tests
+            ability to find optima in mathematical settings.
+      - differential_equations:
+          description: >
+            Ordinary and partial differential equations — first-order ODEs, second-order
+            linear ODEs, systems of ODEs, boundary value problems, and modeling
+            physical systems with differential equations. Tests continuous modeling.
+      - applied_mathematics:
+          description: >
+            Applying mathematics to real-world problems — mathematical modeling,
+            numerical methods, dimensional analysis, scaling, approximation, and
+            mathematical physics. Tests practical mathematical reasoning.
+
+  # ----------------------------------------------------------
+  # 10. SCIENTIFIC REASONING
+  # Benchmark gap: GPQA Diamond saturating (94%),
+  # but experimental design and hypothesis testing
+  # remain challenging; data interpretation gaps
+  # ----------------------------------------------------------
+  Scientific_Reasoning:
+    subject_count: 12
+    benchmark_gaps:
+      - "GPQA Diamond: 92-94% (approaching saturation)"
+      - "Experimental design: significant gaps remain"
+      - "Data interpretation: multi-variable analysis still hard"
+      - "Hypothesis generation: creative scientific thinking lacking"
+    subjects:
+      - experimental_design:
+          description: >
+            Designing valid experiments — hypothesis formulation, control groups,
+            randomization, sample size, blinding, confounding variables, and
+            factorial designs. Tests ability to design rigorous scientific studies.
+      - hypothesis_testing:
+          description: >
+            Statistical hypothesis testing — null/alternative hypotheses, p-values,
+            Type I/II errors, power analysis, t-tests, ANOVA, chi-square, and
+            multiple testing corrections. Tests inferential statistics reasoning.
+      - data_interpretation:
+          description: >
+            Interpreting scientific data — reading tables, interpreting graphs,
+            identifying trends, recognizing data quality issues, distinguishing
+            correlation from causation, and drawing valid conclusions. Tests
+            quantitative reasoning from data.
+      - scientific_method:
+          description: >
+            Understanding the scientific method — observation, hypothesis, prediction,
+            experimentation, analysis, peer review, and replication. Tests knowledge
+            of how scientific knowledge is produced and validated.
+      - research_methodology:
+          description: >
+            Research methods across disciplines — qualitative vs. quantitative,
+            survey design, sampling methods, longitudinal vs. cross-sectional,
+            case studies, and meta-analysis. Tests understanding of research design.
+      - statistical_inference:
+          description: >
+            Drawing conclusions from data — confidence intervals, Bayesian inference,
+            maximum likelihood estimation, regression analysis, and model selection.
+            Tests statistical reasoning beyond basic hypothesis testing.
+      - causal_inference:
+          description: >
+            Determining causation from data — randomized controlled trials, natural
+            experiments, instrumental variables, difference-in-differences, and
+            propensity score matching. Tests ability to distinguish causal effects
+            from observational data.
+      - scientific_modeling:
+          description: >
+            Building and evaluating scientific models — model assumptions,
+            simplification, validation, sensitivity analysis, and understanding
+            limitations. Tests ability to reason about scientific abstractions.
+      - literature_review:
+          description: >
+            Synthesizing scientific literature — identifying key papers, understanding
+            citation networks, resolving conflicting findings, and identifying
+            research gaps. Tests scientific information synthesis.
+      - peer_review:
+          description: >
+            Understanding the peer review process — evaluating manuscript quality,
+            identifying methodological flaws, suggesting improvements, and
+            understanding publication bias. Tests ability to critically evaluate
+            scientific claims.
+      - reproducibility:
+          description: >
+            Scientific reproducibility and replicability — understanding the replication
+            crisis, open science practices, pre-registration, and factors that affect
+            reproducibility. Tests understanding of scientific reliability.
+      - scientific_communication:
+          description: >
+            Communicating scientific findings — writing papers, creating figures,
+            explaining complex concepts to non-experts, and presenting data.
+            Tests ability to convey scientific knowledge clearly and accurately.
+
+  # ----------------------------------------------------------
+  # 11. NATURAL LANGUAGE UNDERSTANDING
+  # Benchmark gap: HellaSwag/BoolQ saturated,
+  # but deeper NLU tasks still differentiate
+  # ----------------------------------------------------------
+  Natural_Language_Understanding:
+    subject_count: 10
+    benchmark_gaps:
+      - "HellaSwag: >95% (saturated)"
+      - "BoolQ: saturated"
+      - "Complex NLU: inference, pragmatics, discourse still gap"
+      - "Multilingual: non-English tasks lag significantly"
+    subjects:
+      - reading_comprehension:
+          description: >
+            Understanding written text — extracting information, answering questions,
+            making inferences, identifying main ideas, and understanding implicit
+            information. Tests foundational text understanding.
+      - natural_language_inference:
+          description: >
+            Determining logical relationships between sentences — entailment,
+            contradiction, and neutral. Covers RTE, SNLI, and multi-premise
+            inference. Tests ability to reason about semantic relationships.
+      - coreference_resolution:
+          description: >
+            Resolving pronouns and noun phrases to their referents — identifying
+            antecedents, handling ambiguity, and tracking entities across discourse.
+            Tests discourse-level language understanding.
+      - sentiment_analysis:
+          description: >
+            Identifying emotions and opinions in text — polarity (positive/negative),
+            intensity, aspect-based sentiment, sarcasm detection, and emotion
+            classification. Tests ability to detect subjective content.
+      - named_entity_recognition:
+          description: >
+            Identifying and classifying entities in text — persons, organizations,
+            locations, dates, and custom entity types. Tests information extraction
+            and entity classification skills.
+      - semantic_role_labeling:
+          description: >
+            Identing the semantic roles of arguments in a sentence — who did what
+            to whom, when, where, and how. Tests understanding of predicate-argument
+            structure and semantic relationships.
+      - discourse_analysis:
+          description: >
+            Understanding discourse structure — rhetorical relations, discourse
+            markers, coherence, cohesion, and multi-sentence reasoning. Tests
+            understanding of how sentences connect to form meaning.
+      - pragmatics:
+          description: >
+            Understanding meaning in context — implicature, speech acts, presupposition,
+            deixis, and conversational maxims (Grice). Tests ability to understand
+            intended meaning beyond literal interpretation.
+      - summarization_quality:
+          description: >
+            Evaluating and producing summaries — extractive vs. abstractive, faithfulness,
+            coverage, coherence, and avoiding hallucination. Tests ability to compress
+            information accurately.
+      - multilingual_understanding:
+          description: >
+            Understanding and translating across languages — cross-lingual transfer,
+            code-switching, low-resource languages, and cultural adaptation. Tests
+            non-English language capabilities.
+
+  # ----------------------------------------------------------
+  # 12. INSTRUCTION FOLLOWING & ALIGNMENT
+  # Benchmark gap: IFEval still differentiates;
+  # complex multi-constraint instructions remain hard
+  # ----------------------------------------------------------
+  Instruction_Following_Alignment:
+    subject_count: 8
+    benchmark_gaps:
+      - "IFEval: still differentiating at 75-90%"
+      - "Multi-constraint: performance drops with constraint count"
+      - "Instruction taxonomy: complex combinations still fail"
+      - "Safety alignment: refusal calibration gaps"
+    subjects:
+      - format_compliance:
+          description: >
+            Following formatting instructions exactly — JSON, markdown, bullet lists,
+            specific output structures, character limits, and field requirements.
+            Tests precise format adherence.
+      - constraint_satisfaction:
+          description: >
+            Satisfying multiple constraints simultaneously — length, content,
+            style, and structural requirements. Tests ability to balance competing
+            instructions without dropping any.
+      - role_playing:
+          description: >
+            Adopting and maintaining a specified persona — character voice, expertise
+            level, tone, behavioral constraints, and staying in character. Tests
+            instruction-based persona adherence.
+      - negative_constraints:
+          description: >
+            Following instructions about what NOT to do — avoiding specific words,
+            topics, structures, or patterns. Tests ability to respect exclusions.
+      - multi_turn_instruction:
+          description: >
+            Maintaining instructions across multiple conversation turns — remembering
+            constraints from earlier messages, adapting to updated instructions, and
+            handling contradictory instructions over time. Tests conversational
+            instruction persistence.
+      - safety_guidelines:
+          description: >
+            Following safety guidelines appropriately — refusing harmful requests,
+            providing safety disclaimers, and knowing when to refuse vs. when to
+            provide responsible information. Tests safety alignment quality.
+      - preference_alignment:
+          description: >
+            Understanding and applying human preferences — helpfulness vs. harmlessness
+            trade-offs, tone preferences, verbosity calibration, and cultural
+            sensitivity. Tests RLHF-influenced behavior quality.
+      - task_decomposition_instructions:
+          description: >
+            Following complex multi-step instructions — breaking down compound
+            requests, ordering sub-tasks correctly, and producing all requested
+            outputs. Tests ability to handle complex instruction following.
+
+# ============================================================
+# SUMMARY STATISTICS
+# ============================================================
+
+summary:
+  existing_domains: 10
+  existing_subjects: 110
+  new_domains: 12
+  new_subjects: 147
+  total_domains: 22
+  total_subjects: 257
+
+  new_domain_subject_counts:
+    Advanced_Reasoning: 14
+    Agentic_Capabilities: 15
+    Code_Engineering: 15
+    AI_ML_Knowledge: 14
+    Multimodal_Understanding: 12
+    Long_Context_Retrieval: 10
+    Creative_Tasks: 12
+    Real_World_Knowledge: 12
+    Mathematical_Reasoning: 13
+    Scientific_Reasoning: 12
+    Natural_Language_Understanding: 10
+    Instruction_Following_Alignment: 8
+
+  benchmark_coverage:
+    saturated_benchmarks_replaced:
+      - "GSM8K (99%) → Mathematical_Reasoning.competition_mathematics, mathematical_proofs"
+      - "MMLU (93%) → Advanced_Reasoning, Scientific_Reasoning, Natural_Language_Understanding"
+      - "HellaSwag (95%) → Natural_Language_Understanding"
+      - "GPQA Diamond (94%) → Scientific_Reasoning, Advanced_Reasoning"
+      - "SWE-bench Verified (81%) → Code_Engineering (harder subjects)"
+    new_benchmark_coverage:
+      - "Humanity's Last Exam → Advanced_Reasoning (causal, counterfactual, abductive)"
+      - "ARC-AGI-3 → Advanced_Reasoning.abstract_pattern_induction"
+      - "SWE-bench Pro/SEAL → Code_Engineering.system_design, debugging_strategies, code_review"
+      - "GAIA → Agentic_Capabilities (web_navigation, multi_step_planning, tool_selection)"
+      - "τ2-Bench → Agentic_Capabilities.multi_agent_coordination, human_in_the_loop"
+      - "MMMU/EMMA → Multimodal_Understanding.cross_modal_reasoning, diagrammatic_reasoning"
+      - "DocVQA → Multimodal_Understanding.document_understanding"
+      - "IFEval → Instruction_Following_Alignment.format_compliance, constraint_satisfaction"
+      - "Needle-in-haystack → Long_Context_Retrieval.needle_in_haystack, context_window_management"
+      - "AIME/IMO → Mathematical_Reasoning.competition_mathematics"
+
+# ============================================================
+# INTEGRATION NOTES
+# ============================================================
+
+integration_notes:
+  taxonomy_yaml: >
+    New domains should be added to taxonomy/subjects.yaml under the 'categories'
+    key alongside existing 10 domains. Each new subject needs a corresponding
+    entry in SUBJECT_DESCRIPTIONS in question_gen.py for custom question generation.
+
+  subject_mapping: >
+    Add aliases for new subjects as needed (e.g., 'reasoning' → causal_reasoning,
+    'creative_writing' → storytelling, 'system_design' → system_design).
+
+  question_generation: >
+    The existing generate_custom_questions() function generates 4 MCQ per subject
+    from descriptions. For deeper evaluation, consider adding LLM-generated questions
+    for these more complex subjects — the deterministic 4-question template may be
+    insufficient for Advanced_Reasoning and Mathematical_Reasoning subjects.
+
+  mmlu_overlap: >
+    Some new subjects overlap with existing MMLU subjects (e.g., formal_logic ↔
+    propositional_logic/first_order_logic, machine_learning ↔ transformer_architecture).
+    The existing MMLU subjects should be kept for backward compatibility and dataset
+    questions. New subjects probe deeper and use custom question generation.
+
+  phased_rollout: >
+    Recommended implementation order based on benchmark impact:
+      Phase 1: Advanced_Reasoning, Mathematical_Reasoning, Code_Engineering
+        (highest benchmark differentiation, directly fills HLE/AIME/SWE-bench gaps)
+      Phase 2: Agentic_Capabilities, AI_ML_Knowledge, Multimodal_Understanding
+        (covers GAIA, MMMU, and ML knowledge gaps)
+      Phase 3: Scientific_Reasoning, Long_Context_Retrieval, Natural_Language_Understanding
+        (fills remaining cognitive gaps)
+      Phase 4: Creative_Tasks, Real_World_Knowledge, Instruction_Following_Alignment
+        (breadth coverage, less benchmark pressure but valuable for DPO training)
+
+  testing: >
+    After adding each phase, run:
+      cd /Users/cyber521k/MindForge && /opt/homebrew/bin/python3.11 -m pytest tests/ -v --tb=short
+    Add domain expansion tests in tests/test_domain_expansion.py following the
+    existing test patterns for the 10-domain taxonomy.
