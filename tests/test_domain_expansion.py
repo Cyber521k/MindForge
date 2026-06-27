@@ -28,8 +28,8 @@ if _python_dir not in sys.path:
 # Taxonomy Loading: 10 Domains
 # ═══════════════════════════════════════════════════════════════════
 
-class TestTaxonomyLoads10Domains(unittest.TestCase):
-    """Verify the taxonomy file loads and contains all 10 domains."""
+class TestTaxonomyLoadsAllDomains(unittest.TestCase):
+    """Verify the taxonomy file loads and contains all 22 domains (10 original + 12 expanded)."""
 
     def test_taxonomy_loads_without_error(self):
         """load_taxonomy() should succeed without raising."""
@@ -37,20 +37,21 @@ class TestTaxonomyLoads10Domains(unittest.TestCase):
         tax = load_taxonomy()
         self.assertIsInstance(tax, dict)
 
-    def test_taxonomy_has_10_domains(self):
-        """Taxonomy should have exactly 10 domains."""
+    def test_taxonomy_has_22_domains(self):
+        """Taxonomy should have exactly 22 domains (10 original + 12 new)."""
         from mindforge.probe.question_gen import load_taxonomy
         tax = load_taxonomy()
         categories = tax.get("categories", {})
-        self.assertEqual(len(categories), 10,
-                         f"Expected 10 domains, got {len(categories)}: {sorted(categories.keys())}")
+        self.assertEqual(len(categories), 22,
+                         f"Expected 22 domains, got {len(categories)}: {sorted(categories.keys())}")
 
     def test_taxonomy_has_expected_domain_names(self):
-        """All 10 expected domain names should be present."""
+        """All 22 expected domain names should be present."""
         from mindforge.probe.question_gen import load_taxonomy
         tax = load_taxonomy()
         categories = tax.get("categories", {})
         expected_domains = [
+            # Original 10
             "STEM",
             "Humanities",
             "Social Science",
@@ -61,6 +62,19 @@ class TestTaxonomyLoads10Domains(unittest.TestCase):
             "Blockchain_Web3",
             "DevOps_Infrastructure",
             "Security_Cryptography",
+            # New 12
+            "Advanced_Reasoning",
+            "Agentic_Capabilities",
+            "Code_Engineering",
+            "AI_ML_Knowledge",
+            "Multimodal_Understanding",
+            "Long_Context_Retrieval",
+            "Creative_Tasks",
+            "Real_World_Knowledge",
+            "Mathematical_Reasoning",
+            "Scientific_Reasoning",
+            "Natural_Language_Understanding",
+            "Instruction_Following_Alignment",
         ]
         for domain in expected_domains:
             self.assertIn(domain, categories,
@@ -164,6 +178,124 @@ class TestNewDomainSubjects(unittest.TestCase):
         for domain, subjects in self.categories.items():
             self.assertEqual(len(subjects), len(set(subjects)),
                            f"Domain '{domain}' has duplicate subjects")
+
+
+# ═══════════════════════════════════════════════════════════════════
+# Expanded Domain Subjects (12 new domains)
+# ═══════════════════════════════════════════════════════════════════
+
+class TestExpandedDomainSubjects(unittest.TestCase):
+    """Verify each of the 12 new expanded domains has correct subjects."""
+
+    def setUp(self):
+        from mindforge.probe.question_gen import load_taxonomy
+        self.tax = load_taxonomy()
+        self.categories = self.tax["categories"]
+
+    def test_advanced_reasoning_has_subjects(self):
+        """Advanced_Reasoning should contain key reasoning subjects."""
+        subjects = self.categories["Advanced_Reasoning"]
+        for s in ["causal_reasoning", "deductive_reasoning", "abstract_pattern_induction"]:
+            self.assertIn(s, subjects, f"Subject '{s}' not in Advanced_Reasoning")
+        self.assertGreaterEqual(len(subjects), 10)
+
+    def test_agentic_capabilities_has_subjects(self):
+        """Agentic_Capabilities should contain key agentic subjects."""
+        subjects = self.categories["Agentic_Capabilities"]
+        for s in ["tool_selection", "multi_step_planning", "web_navigation"]:
+            self.assertIn(s, subjects, f"Subject '{s}' not in Agentic_Capabilities")
+        self.assertGreaterEqual(len(subjects), 10)
+
+    def test_code_engineering_has_subjects(self):
+        """Code_Engineering should contain key engineering subjects."""
+        subjects = self.categories["Code_Engineering"]
+        for s in ["system_design", "debugging_strategies", "code_review"]:
+            self.assertIn(s, subjects, f"Subject '{s}' not in Code_Engineering")
+        self.assertGreaterEqual(len(subjects), 10)
+
+    def test_ai_ml_knowledge_has_subjects(self):
+        """AI_ML_Knowledge should contain key AI/ML subjects."""
+        subjects = self.categories["AI_ML_Knowledge"]
+        for s in ["transformer_architecture", "training_methodology", "rag_systems"]:
+            self.assertIn(s, subjects, f"Subject '{s}' not in AI_ML_Knowledge")
+        self.assertGreaterEqual(len(subjects), 10)
+
+    def test_multimodal_understanding_has_subjects(self):
+        """Multimodal_Understanding should contain key multimodal subjects."""
+        subjects = self.categories["Multimodal_Understanding"]
+        for s in ["image_understanding", "video_understanding", "cross_modal_reasoning"]:
+            self.assertIn(s, subjects, f"Subject '{s}' not in Multimodal_Understanding")
+        self.assertGreaterEqual(len(subjects), 8)
+
+    def test_long_context_retrieval_has_subjects(self):
+        """Long_Context_Retrieval should contain key retrieval subjects."""
+        subjects = self.categories["Long_Context_Retrieval"]
+        for s in ["information_retrieval", "needle_in_haystack", "fact_verification"]:
+            self.assertIn(s, subjects, f"Subject '{s}' not in Long_Context_Retrieval")
+        self.assertGreaterEqual(len(subjects), 8)
+
+    def test_creative_tasks_has_subjects(self):
+        """Creative_Tasks should contain key creative subjects."""
+        subjects = self.categories["Creative_Tasks"]
+        for s in ["storytelling", "poetry_composition", "dialogue_writing"]:
+            self.assertIn(s, subjects, f"Subject '{s}' not in Creative_Tasks")
+        self.assertGreaterEqual(len(subjects), 8)
+
+    def test_real_world_knowledge_has_subjects(self):
+        """Real_World_Knowledge should contain key real-world subjects."""
+        subjects = self.categories["Real_World_Knowledge"]
+        for s in ["current_events", "pop_culture", "sports_knowledge"]:
+            self.assertIn(s, subjects, f"Subject '{s}' not in Real_World_Knowledge")
+        self.assertGreaterEqual(len(subjects), 8)
+
+    def test_mathematical_reasoning_has_subjects(self):
+        """Mathematical_Reasoning should contain key math subjects."""
+        subjects = self.categories["Mathematical_Reasoning"]
+        for s in ["algebraic_reasoning", "competition_mathematics", "linear_algebra"]:
+            self.assertIn(s, subjects, f"Subject '{s}' not in Mathematical_Reasoning")
+        self.assertGreaterEqual(len(subjects), 10)
+
+    def test_scientific_reasoning_has_subjects(self):
+        """Scientific_Reasoning should contain key science subjects."""
+        subjects = self.categories["Scientific_Reasoning"]
+        for s in ["experimental_design", "hypothesis_testing", "statistical_inference"]:
+            self.assertIn(s, subjects, f"Subject '{s}' not in Scientific_Reasoning")
+        self.assertGreaterEqual(len(subjects), 8)
+
+    def test_natural_language_understanding_has_subjects(self):
+        """Natural_Language_Understanding should contain key NLU subjects."""
+        subjects = self.categories["Natural_Language_Understanding"]
+        for s in ["reading_comprehension", "natural_language_inference", "pragmatics"]:
+            self.assertIn(s, subjects, f"Subject '{s}' not in Natural_Language_Understanding")
+        self.assertGreaterEqual(len(subjects), 8)
+
+    def test_instruction_following_alignment_has_subjects(self):
+        """Instruction_Following_Alignment should contain key alignment subjects."""
+        subjects = self.categories["Instruction_Following_Alignment"]
+        for s in ["format_compliance", "safety_guidelines", "preference_alignment"]:
+            self.assertIn(s, subjects, f"Subject '{s}' not in Instruction_Following_Alignment")
+        self.assertGreaterEqual(len(subjects), 5)
+
+    def test_subject_descriptions_section_exists(self):
+        """Taxonomy should have a subject_descriptions section for new subjects."""
+        self.assertIn("subject_descriptions", self.tax)
+        self.assertIsInstance(self.tax["subject_descriptions"], dict)
+        self.assertGreater(len(self.tax["subject_descriptions"]), 100)
+
+    def test_all_new_subjects_have_descriptions(self):
+        """Every new domain subject should have a description."""
+        original_domains = {"STEM", "Humanities", "Social Science", "Professional", "Other"}
+        new_subjects = set()
+        for domain, subjects in self.categories.items():
+            if domain not in original_domains and domain not in {
+                "Programming_Languages", "Agent_Frameworks", "Blockchain_Web3",
+                "DevOps_Infrastructure", "Security_Cryptography"
+            }:
+                new_subjects.update(subjects)
+        descriptions = self.tax.get("subject_descriptions", {})
+        missing = new_subjects - set(descriptions.keys())
+        self.assertEqual(len(missing), 0,
+                        f"Subjects without descriptions: {missing}")
 
 
 # ═══════════════════════════════════════════════════════════════════
@@ -275,13 +407,13 @@ class TestAPITaxonomy(unittest.TestCase):
         resp = self.client.get("/api/taxonomy")
         self.assertEqual(resp.status_code, 200)
 
-    def test_taxonomy_returns_all_10_domains(self):
-        """GET /api/taxonomy should return all 10 domains."""
+    def test_taxonomy_returns_all_22_domains(self):
+        """GET /api/taxonomy should return all 22 domains (10 original + 12 new)."""
         resp = self.client.get("/api/taxonomy")
         data = resp.json()
         categories = data.get("categories", {})
-        self.assertEqual(len(categories), 10,
-                         f"Expected 10 domains, got {len(categories)}")
+        self.assertEqual(len(categories), 22,
+                         f"Expected 22 domains, got {len(categories)}")
 
     def test_taxonomy_has_expected_domain_keys(self):
         """GET /api/taxonomy should include all expected domain names."""
@@ -541,12 +673,12 @@ class TestCrossDomainIntegration(unittest.TestCase):
                          f"Alias '{alias}' resolved to '{resolved}' which is not in any domain")
 
     def test_total_subject_count_across_domains(self):
-        """Total subjects across all domains should be substantial."""
+        """Total subjects across all domains should be substantial (257 after expansion)."""
         from mindforge.probe.question_gen import load_taxonomy
         tax = load_taxonomy()
         total = sum(len(subjects) for subjects in tax["categories"].values())
-        self.assertGreater(total, 50,
-                          f"Expected > 50 total subjects, got {total}")
+        self.assertGreater(total, 200,
+                          f"Expected > 200 total subjects, got {total}")
 
     def test_no_subject_in_multiple_domains(self):
         """No subject should appear in more than one domain."""
