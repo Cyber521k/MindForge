@@ -173,6 +173,7 @@ textarea:focus-visible,
 .blade-tab-active {
   background: linear-gradient(90deg, var(--surface-raised) 0%, var(--surface) 85%, transparent 100%);
   box-shadow: inset 0 0 20px var(--accent-glow), -2px 0 8px var(--accent-glow);
+  animation: blade-glow-pulse 3.6s ease-in-out infinite;
 }
 
 /* Subtle gold border glow on blade content area */
@@ -185,7 +186,17 @@ textarea:focus-visible,
    ═══════════════════════════════════════════════ */
 
 .hex-grid {
+  position: relative;
+  overflow: hidden;
   background-image:
+    radial-gradient(
+      circle at 50% 50%,
+      rgba(255, 215, 0, 0.10) 0%,
+      rgba(255, 215, 0, 0.04) 18%,
+      rgba(205, 127, 50, 0.035) 34%,
+      rgba(4, 28, 28, 0.12) 48%,
+      transparent 68%
+    ),
     repeating-linear-gradient(
       60deg,
       transparent 0px,
@@ -221,6 +232,32 @@ textarea:focus-visible,
   opacity: 0.8;
 }
 
+.hex-grid::before,
+.hex-grid::after {
+  content: "";
+  position: absolute;
+  inset: -25%;
+  pointer-events: none;
+  background-repeat: no-repeat;
+  mix-blend-mode: screen;
+}
+
+.hex-grid::before {
+  background-image:
+    radial-gradient(ellipse 75% 18% at 10% 42%, transparent 35%, rgba(255, 215, 0, 0.12) 47%, transparent 59%),
+    radial-gradient(ellipse 65% 14% at 72% 58%, transparent 38%, rgba(205, 127, 50, 0.10) 49%, transparent 61%);
+  animation: energy-line-flow 18s linear infinite;
+  opacity: 0.5;
+}
+
+.hex-grid::after {
+  background-image:
+    radial-gradient(ellipse 82% 16% at 92% 34%, transparent 37%, rgba(255, 215, 0, 0.10) 48%, transparent 60%),
+    radial-gradient(ellipse 70% 12% at 28% 68%, transparent 36%, rgba(196, 218, 125, 0.08) 48%, transparent 60%);
+  animation: energy-line-flow-reverse 24s linear infinite;
+  opacity: 0.4;
+}
+
 /* ═══════════════════════════════════════════════
    SCANLINES (subtle retro CRT effect)
    ═══════════════════════════════════════════════ */
@@ -229,11 +266,47 @@ textarea:focus-visible,
   background: repeating-linear-gradient(
     0deg,
     transparent 0px,
-    transparent 2px,
-    rgba(0, 0, 0, 0.08) 2px,
-    rgba(0, 0, 0, 0.08) 3px
+    transparent 3px,
+    rgba(0, 0, 0, 0.08) 3px,
+    rgba(0, 0, 0, 0.08) 4px
   );
-  opacity: 0.5;
+  opacity: 0.35;
+}
+
+.xbox-root::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  background: radial-gradient(
+    ellipse at center,
+    transparent 0%,
+    transparent 52%,
+    rgba(4, 28, 28, 0.28) 78%,
+    rgba(4, 28, 28, 0.62) 100%
+  );
+  z-index: 3;
+}
+
+@keyframes energy-line-flow {
+  0% { transform: translate3d(-8%, -2%, 0) rotate(-2deg); }
+  50% { transform: translate3d(6%, 3%, 0) rotate(1deg); }
+  100% { transform: translate3d(-8%, -2%, 0) rotate(-2deg); }
+}
+
+@keyframes energy-line-flow-reverse {
+  0% { transform: translate3d(7%, 2%, 0) rotate(2deg); }
+  50% { transform: translate3d(-6%, -3%, 0) rotate(-1deg); }
+  100% { transform: translate3d(7%, 2%, 0) rotate(2deg); }
+}
+
+@keyframes blade-glow-pulse {
+  0%, 100% {
+    box-shadow: inset 0 0 14px var(--accent-glow), -2px 0 6px var(--accent-glow);
+  }
+  50% {
+    box-shadow: inset 0 0 28px var(--accent-glow), -2px 0 14px var(--accent);
+  }
 }
 
 /* ═══════════════════════════════════════════════
@@ -270,4 +343,152 @@ textarea:focus-visible,
   box-shadow: inset 0 0 15px var(--accent-glow);
   color: var(--accent);
   font-weight: 600;
+}
+
+/* ═══════════════════════════════════════════════
+   XBOX ORB — large radial gradient sphere with pulsing glow
+   ═══════════════════════════════════════════════ */
+
+.xbox-orb {
+  width: 280px;
+  height: 280px;
+  border-radius: 50%;
+  background:
+    radial-gradient(
+      circle at 35% 35%,
+      rgba(255, 215, 0, 0.15) 0%,
+      rgba(255, 215, 0, 0.08) 25%,
+      rgba(205, 127, 50, 0.05) 50%,
+      transparent 70%
+    ),
+    radial-gradient(
+      circle at 50% 50%,
+      rgba(27, 23, 19, 0.4) 0%,
+      transparent 60%
+    );
+  box-shadow:
+    0 0 60px var(--accent-glow),
+    0 0 120px rgba(255, 215, 0, 0.06),
+    inset 0 0 40px rgba(255, 215, 0, 0.08);
+}
+
+/* Orb pulse animation — subtle scale + opacity pulsing */
+.orb-pulse {
+  animation: orb-pulse 4s ease-in-out infinite;
+}
+
+@keyframes orb-pulse {
+  0%, 100% {
+    transform: translate(-50%, -50%) scale(1);
+    opacity: 0.7;
+  }
+  50% {
+    transform: translate(-50%, -50%) scale(1.08);
+    opacity: 1;
+  }
+}
+
+/* ═══════════════════════════════════════════════
+   WIREFRAME GRID — perspective grid with vanishing point
+   ═══════════════════════════════════════════════ */
+
+.wireframe-grid {
+  background-image:
+    /* Horizontal lines converging toward center */
+    repeating-linear-gradient(
+      0deg,
+      transparent 0px,
+      transparent 40px,
+      rgba(205, 127, 50, 0.04) 40px,
+      rgba(205, 127, 50, 0.04) 41px
+    ),
+    /* Vertical lines converging toward center */
+    repeating-linear-gradient(
+      90deg,
+      transparent 0px,
+      transparent 40px,
+      rgba(205, 127, 50, 0.04) 40px,
+      rgba(205, 127, 50, 0.04) 41px
+    );
+  opacity: 0.5;
+}
+
+.wireframe-perspective {
+  background-image:
+    /* Perspective lines radiating from center */
+    repeating-conic-gradient(
+      from 0deg at 50% 50%,
+      transparent 0deg,
+      transparent 14deg,
+      rgba(205, 127, 50, 0.03) 14deg,
+      rgba(205, 127, 50, 0.03) 15deg
+    ),
+    /* Horizontal perspective lines */
+    repeating-linear-gradient(
+      0deg,
+      transparent 0px,
+      transparent 30px,
+      rgba(205, 127, 50, 0.03) 30px,
+      rgba(205, 127, 50, 0.03) 31px
+    );
+  opacity: 0.4;
+}
+
+/* ═══════════════════════════════════════════════
+   BOOT SCREEN — dark overlay for boot sequence
+   ═══════════════════════════════════════════════ */
+
+.boot-screen {
+  background: radial-gradient(
+    ellipse at center,
+    rgba(4, 28, 28, 0.95) 0%,
+    rgba(4, 28, 28, 0.98) 50%,
+    rgba(0, 0, 0, 0.99) 100%
+  );
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+}
+
+/* ═══════════════════════════════════════════════
+   VERTICAL NODE CONNECTOR — circular nodes on left edge of menu
+   ═══════════════════════════════════════════════ */
+
+.vertical-node-connector {
+  position: relative;
+}
+
+.vertical-node-connector::before {
+  content: "";
+  position: absolute;
+  left: 50%;
+  top: 0;
+  bottom: 0;
+  width: 1px;
+  background: linear-gradient(
+    180deg,
+    transparent 0%,
+    var(--accent-dim) 10%,
+    var(--accent-dim) 90%,
+    transparent 100%
+  );
+  opacity: 0.4;
+  transform: translateX(-50%);
+  box-shadow: 0 0 4px var(--accent-glow);
+}
+
+/* ═══════════════════════════════════════════════
+   VERTICAL BLADE ITEMS — right-side menu entries
+   ═══════════════════════════════════════════════ */
+
+.vertical-blade-item {
+  transition: all 200ms ease;
+}
+
+.vertical-blade-item:hover {
+  opacity: 0.7 !important;
+}
+
+.vertical-blade-item-active {
+  transition: all 200ms ease;
+  animation: blade-glow-pulse 3.6s ease-in-out infinite;
 }

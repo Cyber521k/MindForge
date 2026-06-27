@@ -1,15 +1,16 @@
 """Tests for Xbox Blades redesign components and layout.
 
 Verifies:
-- BladeBar.tsx component exists and renders 8 tabs
+- BladeBar.tsx component exists and renders 8 tabs (VERTICAL right-side menu)
 - BladeContent.tsx component exists with icon/title/children layout
 - SoundManager.tsx component exists with SoundEngine class
-- App.tsx uses BladeBar (not old Sidebar) and has Xbox layout structure
+- App.tsx uses BladeBar (vertical right-side) and has Xbox layout structure
 - Theme colors are still correct (Hermes gold/teal palette)
-- CSS classes for Xbox visual effects exist (hex-grid, scanlines, blade-panel)
+- CSS classes for Xbox visual effects exist (hex-grid, scanlines, blade-panel, orb, wireframe-grid)
 - All 8 blade screens are still present
 - Controller hints exist in App.tsx
 - MuteToggle component exists in SoundManager
+- Boot sequence, orb, wireframe grid, vertical nodes are present
 """
 
 import os
@@ -64,11 +65,11 @@ class TestXboxComponentsExist(unittest.TestCase):
 
 
 # ═══════════════════════════════════════════════════════════════════
-# BladeBar Component Tests
+# BladeBar Component Tests (VERTICAL right-side menu)
 # ═══════════════════════════════════════════════════════════════════
 
 class TestBladeBarContent(unittest.TestCase):
-    """Verify BladeBar.tsx has correct structure and 8 tabs."""
+    """Verify BladeBar.tsx has correct structure and 8 tabs (vertical layout)."""
 
     def setUp(self):
         self.path = os.path.join(_project_root, "src", "components", "BladeBar.tsx")
@@ -80,7 +81,6 @@ class TestBladeBarContent(unittest.TestCase):
 
     def test_blade_bar_has_8_tabs(self):
         """BladeBar should define exactly 8 blade tabs."""
-        # Count the tab entries in BLADE_TABS array
         tab_ids = [
             "model-setup", "domain-setup", "probing", "review",
             "format", "train", "stats", "settings",
@@ -91,7 +91,6 @@ class TestBladeBarContent(unittest.TestCase):
 
     def test_blade_bar_has_icons(self):
         """BladeBar tabs should have icons."""
-        # Check for emoji icons
         for icon in ["🖥", "📚", "🔍", "📋", "📦", "🎯", "📊", "⚙"]:
             self.assertIn(icon, self.content, f"Icon '{icon}' not found in BladeBar")
 
@@ -114,7 +113,7 @@ class TestBladeBarContent(unittest.TestCase):
         self.assertIn("backdropFilter", self.content)
 
     def test_blade_bar_has_clip_path(self):
-        """BladeBar should use clip-path for angled blade edges."""
+        """BladeBar should use clip-path for angled blade edges (vertical)."""
         self.assertIn("clipPath", self.content)
 
     def test_blade_bar_has_aria_attributes(self):
@@ -130,6 +129,20 @@ class TestBladeBarContent(unittest.TestCase):
     def test_blade_bar_is_memoized(self):
         """BladeBar should be wrapped in memo() for performance."""
         self.assertIn("memo", self.content)
+
+    def test_blade_bar_is_vertical(self):
+        """BladeBar should use vertical layout (flexDirection column)."""
+        self.assertIn("column", self.content)
+        self.assertIn("flexDirection", self.content)
+
+    def test_blade_bar_has_vertical_node_connector(self):
+        """BladeBar should have a vertical node connector with circular nodes."""
+        self.assertIn("vertical-node-connector", self.content)
+        self.assertIn("borderRadius", self.content)
+
+    def test_blade_bar_has_vertical_blade_item_classes(self):
+        """BladeBar should use vertical-blade-item CSS classes."""
+        self.assertIn("vertical-blade-item", self.content)
 
 
 # ═══════════════════════════════════════════════════════════════════
@@ -159,14 +172,20 @@ class TestBladeContentContent(unittest.TestCase):
         """BladeContent should accept children."""
         self.assertIn("children", self.content)
 
-    def test_blade_content_has_left_panel(self):
-        """BladeContent should have a left decorative icon panel."""
-        self.assertIn("icon", self.content)
-        # The left panel should contain the large icon
-        self.assertIn("fontSize", self.content)
+    def test_blade_content_has_no_left_icon_panel(self):
+        """BladeContent should NOT have the old left icon panel (35% width)."""
+        self.assertNotIn("35%", self.content)
+
+    def test_blade_content_has_full_area_layout(self):
+        """BladeContent should use full-area layout (flexDirection column)."""
+        self.assertIn("column", self.content)
+
+    def test_blade_content_has_title_header_with_gradient_line(self):
+        """BladeContent should have title header with gradient line."""
+        self.assertIn("gradient", self.content.lower())
 
     def test_blade_content_has_right_content_area(self):
-        """BladeContent should have a right scrollable content area."""
+        """BladeContent should have a scrollable content area."""
         self.assertIn("overflowY", self.content)
 
     def test_blade_content_has_frosted_glass(self):
@@ -226,6 +245,16 @@ class TestSoundManagerContent(unittest.TestCase):
         """SoundEngine should have back sound."""
         self.assertIn("back", self.content)
 
+    def test_sound_manager_has_boot_sound(self):
+        """SoundEngine should expose a boot sound routed through play()."""
+        self.assertIn('"boot"', self.content)
+        self.assertIn("boot()", self.content)
+
+    def test_sound_manager_has_whoosh_sound(self):
+        """SoundEngine should have a whoosh sound for blade transitions."""
+        self.assertIn("whoosh", self.content)
+        self.assertIn("whoosh()", self.content)
+
     def test_sound_manager_has_ambient_drone(self):
         """SoundEngine should have ambient drone (startAmbient/stopAmbient)."""
         self.assertIn("ambient", self.content.lower())
@@ -248,13 +277,18 @@ class TestSoundManagerContent(unittest.TestCase):
         """SoundEngine should persist mute preference to localStorage."""
         self.assertIn("localStorage", self.content)
 
+    def test_sound_manager_whoosh_has_low_end(self):
+        """Whoosh sound should have low-end (lowpass filter + sub-bass)."""
+        self.assertIn("lowpass", self.content.lower())
+        self.assertIn("subBass", self.content)
+
 
 # ═══════════════════════════════════════════════════════════════════
-# App.tsx Xbox Layout Tests
+# App.tsx Xbox Layout Tests (VERTICAL menu)
 # ═══════════════════════════════════════════════════════════════════
 
 class TestAppXboxLayout(unittest.TestCase):
-    """Verify App.tsx uses Xbox Blades layout structure."""
+    """Verify App.tsx uses Xbox Blades layout structure (vertical menu)."""
 
     def setUp(self):
         self.path = os.path.join(_project_root, "src", "App.tsx")
@@ -303,6 +337,15 @@ class TestAppXboxLayout(unittest.TestCase):
         self.assertIn("perspective", self.content)
         self.assertIn("rotateY", self.content)
 
+    def test_app_blade_transition_matches_xbox_sweep(self):
+        """Blade transitions should use the tuned 3D sweep timing and effects."""
+        self.assertIn("rotateY: direction > 0 ? 20 : -20", self.content)
+        self.assertIn("rotateY: direction > 0 ? -20 : 20", self.content)
+        self.assertIn("scale: 0.92", self.content)
+        self.assertIn("scale: 1", self.content)
+        self.assertIn('filter: "blur(4px)"', self.content)
+        self.assertIn("duration: 0.35", self.content)
+
     def test_app_has_animate_presence(self):
         """App.tsx should use AnimatePresence for blade transitions."""
         self.assertIn("AnimatePresence", self.content)
@@ -311,18 +354,27 @@ class TestAppXboxLayout(unittest.TestCase):
         """App.tsx should track direction for blade sweep."""
         self.assertIn("direction", self.content)
 
-    def test_app_has_blade_bar_at_bottom(self):
-        """App.tsx should render BladeBar in a bottom container."""
+    def test_app_has_vertical_blade_bar_on_right(self):
+        """App.tsx should render BladeBar on the right side (not bottom)."""
         self.assertIn("BladeBar", self.content)
+        # Should NOT have the old bottom bar height container
+        self.assertNotIn("height: 100", self.content)
 
     def test_app_wraps_screens_in_blade_content(self):
         """App.tsx should wrap each screen in BladeContent."""
         self.assertIn("BladeContent", self.content)
 
     def test_app_has_controller_hints(self):
-        """App.tsx should have controller hints (arrow keys, Enter)."""
-        self.assertIn("Navigate", self.content)
-        self.assertIn("Select", self.content)
+        """App.tsx should have Xbox controller button hints."""
+        self.assertIn("B = Back", self.content)
+        self.assertIn("A = Select", self.content)
+
+    def test_app_top_bar_has_dramatic_teal_gradient(self):
+        """Top bar should keep the Hermes teal theme with stronger fade."""
+        self.assertIn(
+            "linear-gradient(180deg, rgba(4,28,28,0.95) 0%, transparent 100%)",
+            self.content,
+        )
 
     def test_app_has_hex_grid_background(self):
         """App.tsx should have hexagonal grid background overlay."""
@@ -341,17 +393,56 @@ class TestAppXboxLayout(unittest.TestCase):
         self.assertIn("Connected", self.content)
 
     def test_app_has_arrow_key_navigation(self):
-        """App.tsx should handle arrow key navigation between blades."""
-        self.assertIn("ArrowRight", self.content)
-        self.assertIn("ArrowLeft", self.content)
+        """App.tsx should handle arrow key navigation (up/down for vertical menu)."""
+        self.assertIn("ArrowDown", self.content)
+        self.assertIn("ArrowUp", self.content)
 
     def test_app_plays_sweep_on_navigate(self):
         """App.tsx should play sweep sound on navigation."""
         self.assertIn("sweep", self.content)
 
+    def test_app_plays_whoosh_on_navigate(self):
+        """App.tsx should play whoosh sound on navigation."""
+        self.assertIn("whoosh", self.content)
+
     def test_app_has_mute_toggle_in_header(self):
         """App.tsx should render MuteToggle in the top bar."""
         self.assertIn("MuteToggle", self.content)
+
+    def test_app_has_boot_sequence_state(self):
+        """App.tsx should track a first-load boot state with a 1.5s hold."""
+        self.assertIn("showBoot", self.content)
+        self.assertIn("setShowBoot", self.content)
+        self.assertIn("1500", self.content)
+
+    def test_app_plays_boot_then_starts_ambient(self):
+        """App.tsx should play boot on load and start ambient after boot."""
+        self.assertIn('play("boot")', self.content)
+        self.assertIn("startAmbient", self.content)
+
+    def test_app_boot_screen_has_logo_loading_and_overlays(self):
+        """Boot screen should render the logo, loading text, hex grid, and scanlines."""
+        self.assertIn("Initializing MindForge...", self.content)
+        self.assertIn("boot-screen", self.content)
+        self.assertIn("hex-grid", self.content)
+        self.assertIn("scanlines", self.content)
+
+    def test_app_has_xbox_orb(self):
+        """App.tsx should have the xbox-orb element with orb-pulse animation."""
+        self.assertIn("xbox-orb", self.content)
+        self.assertIn("orb-pulse", self.content)
+
+    def test_app_has_wireframe_grid(self):
+        """App.tsx should have wireframe-grid background."""
+        self.assertIn("wireframe-grid", self.content)
+
+    def test_app_has_vertical_node_connector(self):
+        """App.tsx should reference vertical node connector (via BladeBar)."""
+        self.assertIn("BladeBar", self.content)
+
+    def test_app_version_is_v001(self):
+        """App.tsx should show v0.0.1 (not v7.0)."""
+        self.assertIn("v0.0.1", self.content)
 
 
 # ═══════════════════════════════════════════════════════════════════
@@ -434,6 +525,47 @@ class TestXboxCSSClasses(unittest.TestCase):
     def test_xbox_menu_item_active_class(self):
         """CSS should have .xbox-menu-item-active class."""
         self.assertIn(".xbox-menu-item-active", self.content)
+
+    def test_xbox_orb_class(self):
+        """CSS should have .xbox-orb class for the large radial gradient sphere."""
+        self.assertIn(".xbox-orb", self.content)
+
+    def test_wireframe_grid_class(self):
+        """CSS should have .wireframe-grid class for perspective grid background."""
+        self.assertIn(".wireframe-grid", self.content)
+
+    def test_wireframe_perspective_class(self):
+        """CSS should have .wireframe-perspective class for 3D perspective grid."""
+        self.assertIn(".wireframe-perspective", self.content)
+
+    def test_boot_screen_class(self):
+        """CSS should have .boot-screen class for boot sequence overlay."""
+        self.assertIn(".boot-screen", self.content)
+
+    def test_vertical_node_connector_class(self):
+        """CSS should have .vertical-node-connector styles."""
+        self.assertIn(".vertical-node-connector", self.content)
+
+    def test_vertical_blade_item_class(self):
+        """CSS should have .vertical-blade-item class."""
+        self.assertIn(".vertical-blade-item", self.content)
+
+    def test_vertical_blade_item_active_class(self):
+        """CSS should have .vertical-blade-item-active class."""
+        self.assertIn(".vertical-blade-item-active", self.content)
+
+    def test_orb_pulse_animation(self):
+        """CSS should have orb-pulse animation (scale + opacity pulsing)."""
+        self.assertIn(".orb-pulse", self.content)
+        self.assertIn("orb-pulse", self.content)
+
+    def test_frosted_glass_class(self):
+        """CSS should have .frosted-glass class."""
+        self.assertIn(".frosted-glass", self.content)
+
+    def test_xbox_root_class(self):
+        """CSS should have .xbox-root class."""
+        self.assertIn(".xbox-root", self.content)
 
     def test_css_has_hermes_colors(self):
         """CSS should contain Hermes theme color values."""
@@ -557,7 +689,6 @@ class TestHooksAndLib(unittest.TestCase):
     def test_main_tsx_exists(self):
         path = os.path.join(_project_root, "src", "main.tsx")
         self.assertTrue(os.path.exists(path))
-
 
 if __name__ == "__main__":
     unittest.main()

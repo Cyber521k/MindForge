@@ -1,6 +1,6 @@
 import { useRef, useCallback, useState, useEffect } from "react";
 
-type SoundType = "sweep" | "select" | "scroll" | "back";
+type SoundType = "sweep" | "select" | "scroll" | "back" | "boot" | "whoosh";
 
 /**
  * Web Audio API sound effect manager for Xbox Blades UI.
@@ -47,6 +47,7 @@ export class SoundEngine {
   // Cache noise buffers to avoid GC pressure on repeated sweep/back calls
   private sweepBuffer: AudioBuffer | null = null;
   private backBuffer: AudioBuffer | null = null;
+  private whooshBuffer: AudioBuffer | null = null;
 
   /** Blade sweep: filtered noise burst with pitch sweep (whoosh) */
   sweep() {
@@ -174,6 +175,112 @@ export class SoundEngine {
     noise.stop(now + duration);
   }
 
+  /** Boot: low rising tone with a soft harmonic shimmer */
+  boot() {
+    if (this.muted) return;
+    const ctx = this.ensureCtx();
+    if (!ctx) return;
+
+    const now = ctx.currentTime;
+    const duration = 1.15;
+
+    const osc = ctx.createOscillator();
+    osc.type = "sine";
+    osc.frequency.setValueAtTime(82, now);
+    osc.frequency.exponentialRampToValueAtTime(196, now + duration * 0.65);
+    osc.frequency.exponentialRampToValueAtTime(392, now + duration);
+
+    const shimmer = ctx.createOscillator();
+    shimmer.type = "triangle";
+    shimmer.frequency.setValueAtTime(330, now + 0.15);
+    shimmer.frequency.exponentialRampToValueAtTime(660, now + duration);
+
+    const master = ctx.createGain();
+    master.gain.setValueAtTime(0, now);
+    master.gain.linearRampToValueAtTime(0.12, now + 0.18);
+    master.gain.setValueAtTime(0.12, now + duration * 0.72);
+    master.gain.exponentialRampToValueAtTime(0.001, now + duration);
+
+    const shimmerGain = ctx.createGain();
+    shimmerGain.gain.setValueAtTime(0, now);
+    shimmerGain.gain.linearRampToValueAtTime(0.035, now + 0.35);
+    shimmerGain.gain.exponentialRampToValueAtTime(0.001, now + duration);
+
+    osc.connect(master);
+    shimmer.connect(shimmerGain);
+    shimmerGain.connect(master);
+    master.connect(ctx.destination);
+
+    osc.start(now);
+    shimmer.start(now + 0.15);
+    osc.stop(now + duration);
+    shimmer.stop(now + duration);
+  }
+
+  /**
+   * Whoosh: deeper blade transition sound with more low-end.
+   * Uses a lowpass-filtered noise burst with a sub-bass sine sweep
+   * for a fuller, more cinematic transition effect.
+   */
+  whoosh() {
+    if (this.muted) return;
+    const ctx = this.ensureCtx();
+    if (!ctx) return;
+
+    const now = ctx.currentTime;
+    const duration = 0.5;
+
+    // Cached noise buffer for the whoosh
+    if (!this.whooshBuffer) {
+      const bufferSize = ctx.sampleRate * duration;
+      const buffer = ctx.createBuffer(1, bufferSize, ctx.sampleRate);
+      const data = buffer.getChannelData(0);
+      for (let i = 0; i < bufferSize; i++) {
+        data[i] = (Math.random() * 2 - 1) * (1 - i / bufferSize);
+      }
+      this.whooshBuffer = buffer;
+    }
+
+    const noise = ctx.createBufferSource();
+    noise.buffer = this.whooshBuffer;
+
+    // Lowpass filter for deep, muffled whoosh (more low-end than sweep)
+    const filter = ctx.createBiquadFilter();
+    filter.type = "lowpass";
+    filter.frequency.setValueAtTime(800, now);
+    filter.frequency.exponentialRampToValueAtTime(120, now + duration);
+    filter.Q.value = 1.2;
+
+    // Sub-bass sine sweep for extra low-end punch
+    const subBass = ctx.createOscillator();
+    subBass.type = "sine";
+    subBass.frequency.setValueAtTime(120, now);
+    subBass.frequency.exponentialRampToValueAtTime(40, now + duration);
+
+    // Gain envelopes
+    const noiseGain = ctx.createGain();
+    noiseGain.gain.setValueAtTime(0, now);
+    noiseGain.gain.linearRampToValueAtTime(0.18, now + 0.08);
+    noiseGain.gain.exponentialRampToValueAtTime(0.001, now + duration);
+
+    const bassGain = ctx.createGain();
+    bassGain.gain.setValueAtTime(0, now);
+    bassGain.gain.linearRampToValueAtTime(0.12, now + 0.1);
+    bassGain.gain.exponentialRampToValueAtTime(0.001, now + duration);
+
+    noise.connect(filter);
+    filter.connect(noiseGain);
+    noiseGain.connect(ctx.destination);
+
+    subBass.connect(bassGain);
+    bassGain.connect(ctx.destination);
+
+    noise.start(now);
+    subBass.start(now);
+    noise.stop(now + duration);
+    subBass.stop(now + duration);
+  }
+
   /** Low-volume ambient drone — can be toggled */
   startAmbient() {
     if (this.muted) return;
@@ -220,6 +327,8 @@ export class SoundEngine {
       case "select": this.select(); break;
       case "scroll": this.scroll(); break;
       case "back": this.back(); break;
+      case "boot": this.boot(); break;
+      case "whoosh": this.whoosh(); break;
     }
   }
 }

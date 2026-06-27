@@ -42,21 +42,27 @@ const SCREEN_TITLES: Record<Screen, string> = {
   "settings": "Settings",
 };
 
-// Framer Motion variants for blade sweep transition (horizontal)
+// Framer Motion variants for blade sweep transition (3D perspective)
 const bladeVariants = {
   enter: (direction: number) => ({
     x: direction > 0 ? "100%" : "-100%",
-    rotateY: direction > 0 ? 15 : -15,
+    rotateY: direction > 0 ? 20 : -20,
+    scale: 1,
+    filter: "blur(0px)",
     opacity: 0,
   }),
   center: {
     x: 0,
     rotateY: 0,
+    scale: 1,
+    filter: "blur(0px)",
     opacity: 1,
   },
   exit: (direction: number) => ({
     x: direction > 0 ? "-30%" : "30%",
-    rotateY: direction > 0 ? -15 : 15,
+    rotateY: direction > 0 ? -20 : 20,
+    scale: 0.92,
+    filter: "blur(4px)",
     opacity: 0,
   }),
 };
@@ -66,7 +72,22 @@ export default function App() {
   const [connected, setConnected] = useState(false);
   const [selectedModel, setSelectedModel] = useState<string>("");
   const [direction, setDirection] = useState(0);
+  const [showBoot, setShowBoot] = useState(true);
   const prefersReducedMotion = useReducedMotion();
+
+  // Boot sequence: play boot sound, then dismiss after 1.5s
+  useEffect(() => {
+    getSoundEngine().play("boot");
+    const timer = setTimeout(() => setShowBoot(false), 1500);
+    return () => clearTimeout(timer);
+  }, []);
+
+  // Start ambient drone after boot screen dismisses
+  useEffect(() => {
+    if (!showBoot) {
+      getSoundEngine().startAmbient();
+    }
+  }, [showBoot]);
 
   // Poll backend connectivity every 5s for StatusBar
   useEffect(() => {
@@ -87,10 +108,11 @@ export default function App() {
     const dir = targetIdx > currentIdx ? 1 : -1;
     setDirection(dir);
     getSoundEngine().play("sweep");
+    getSoundEngine().play("whoosh");
     setScreen(target);
   }, [screen]);
 
-  // Arrow key navigation between blades (left/right only)
+  // Arrow key navigation between blades (up/down for vertical menu)
   useEffect(() => {
     const handler = (e: KeyboardEvent) => {
       // Don't interfere with typing
@@ -101,12 +123,12 @@ export default function App() {
       if (screen === "review") return;
 
       const currentIdx = SCREEN_ORDER.indexOf(screen);
-      if (e.key === "ArrowRight") {
+      if (e.key === "ArrowDown") {
         if (currentIdx < SCREEN_ORDER.length - 1) {
           e.preventDefault();
           navigate(SCREEN_ORDER[currentIdx + 1]);
         }
-      } else if (e.key === "ArrowLeft") {
+      } else if (e.key === "ArrowUp") {
         if (currentIdx > 0) {
           e.preventDefault();
           navigate(SCREEN_ORDER[currentIdx - 1]);
@@ -151,7 +173,7 @@ export default function App() {
             alignItems: "center",
             justifyContent: "space-between",
             padding: "8px 20px",
-            background: "linear-gradient(180deg, rgba(27,23,19,0.8) 0%, transparent 100%)",
+            background: "linear-gradient(180deg, rgba(4,28,28,0.95) 0%, transparent 100%)",
             position: "relative",
             zIndex: 30,
             flexShrink: 0,
@@ -160,7 +182,7 @@ export default function App() {
           <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
             <span className="caduceus" style={{ fontSize: 20 }}>⚕</span>
             <span style={{ fontSize: 16, fontWeight: 700, color: "var(--accent)" }}>MindForge</span>
-            <span style={{ fontSize: 11, color: "var(--text-dim)", marginLeft: 8 }}>v7.0</span>
+            <span style={{ fontSize: 11, color: "var(--text-dim)", marginLeft: 8 }}>v0.0.1</span>
           </div>
           <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
             {selectedModel && (
@@ -175,66 +197,82 @@ export default function App() {
           </div>
         </div>
 
-        {/* Upper 2/3: blade content area with 3D perspective */}
-        <div
-          style={{
-            flex: 1,
-            position: "relative",
-            overflow: "hidden",
-            perspective: "1200px",
-            perspectiveOrigin: "center 40%",
-            transformStyle: "preserve-3d",
-          }}
-        >
-          {/* Hexagonal grid background overlay */}
-          <div className="hex-grid" style={{ position: "absolute", inset: 0, pointerEvents: "none", zIndex: 0 }} />
+        {/* Main area: content (left) + vertical blade bar (right) */}
+        <div style={{ flex: 1, display: "flex", overflow: "hidden", position: "relative" }}>
+          {/* Left: blade content area with 3D perspective */}
+          <div
+            style={{
+              flex: 1,
+              position: "relative",
+              overflow: "hidden",
+              perspective: "1200px",
+              perspectiveOrigin: "center 40%",
+              transformStyle: "preserve-3d",
+            }}
+          >
+            {/* Wireframe perspective grid background */}
+            <div className="wireframe-grid" style={{ position: "absolute", inset: 0, pointerEvents: "none", zIndex: 0 }} />
 
-          {/* Scanline overlay */}
-          <div className="scanlines" style={{ position: "absolute", inset: 0, pointerEvents: "none", zIndex: 1 }} />
+            {/* Hexagonal grid background overlay */}
+            <div className="hex-grid" style={{ position: "absolute", inset: 0, pointerEvents: "none", zIndex: 1 }} />
 
-          <AnimatePresence mode="wait" custom={direction}>
-            <motion.div
-              key={screen}
-              custom={direction}
-              variants={prefersReducedMotion ? {
-                enter: { opacity: 0 },
-                center: { opacity: 1 },
-                exit: { opacity: 0 },
-              } : bladeVariants}
-              initial="enter"
-              animate="center"
-              exit="exit"
-              transition={prefersReducedMotion ? { duration: 0.15 } : {
-                x: { type: "spring", stiffness: 260, damping: 28 },
-                rotateY: { type: "spring", stiffness: 260, damping: 28 },
-                opacity: { duration: 0.25 },
-              }}
+            {/* Xbox orb — large pulsing sphere in background */}
+            <div
+              className="xbox-orb orb-pulse"
               style={{
-                height: "100%",
-                transformStyle: "preserve-3d",
-                backfaceVisibility: "hidden",
-                position: "relative",
-                zIndex: 2,
-                willChange: "transform, opacity",
+                position: "absolute",
+                top: "50%",
+                left: "35%",
+                transform: "translate(-50%, -50%)",
+                pointerEvents: "none",
+                zIndex: 0,
               }}
-            >
-              <main id="main-content" role="region" aria-label={SCREEN_TITLES[screen]} aria-live="polite" style={{ height: "100%" }}>
-                {screens[screen]}
-              </main>
-            </motion.div>
-          </AnimatePresence>
-        </div>
+              aria-hidden="true"
+            />
 
-        {/* Bottom: blade bar */}
-        <div
-          style={{
-            height: 100,
-            flexShrink: 0,
-            position: "relative",
-            zIndex: 20,
-          }}
-        >
-          <BladeBar active={screen} onSelect={navigate} direction={direction} />
+            {/* Scanline overlay */}
+            <div className="scanlines" style={{ position: "absolute", inset: 0, pointerEvents: "none", zIndex: 2 }} />
+
+            <AnimatePresence mode="wait" custom={direction}>
+              <motion.div
+                key={screen}
+                custom={direction}
+                variants={prefersReducedMotion ? {
+                  enter: { opacity: 0 },
+                  center: { opacity: 1 },
+                  exit: { opacity: 0 },
+                } : bladeVariants}
+                initial="enter"
+                animate="center"
+                exit="exit"
+                transition={prefersReducedMotion ? { duration: 0.15 } : { duration: 0.35, ease: [0.22, 1, 0.36, 1] }}
+                style={{
+                  height: "100%",
+                  transformStyle: "preserve-3d",
+                  backfaceVisibility: "hidden",
+                  position: "relative",
+                  zIndex: 3,
+                  willChange: "transform, opacity, filter",
+                }}
+              >
+                <main id="main-content" role="region" aria-label={SCREEN_TITLES[screen]} aria-live="polite" style={{ height: "100%" }}>
+                  {screens[screen]}
+                </main>
+              </motion.div>
+            </AnimatePresence>
+          </div>
+
+          {/* Right: vertical blade bar */}
+          <div
+            style={{
+              width: 240,
+              flexShrink: 0,
+              position: "relative",
+              zIndex: 20,
+            }}
+          >
+            <BladeBar active={screen} onSelect={navigate} direction={direction} />
+          </div>
         </div>
 
         {/* Controller hints */}
@@ -249,7 +287,7 @@ export default function App() {
             pointerEvents: "none",
           }}
         >
-          ← → Navigate
+          B = Back
         </div>
         <div
           style={{
@@ -262,8 +300,57 @@ export default function App() {
             pointerEvents: "none",
           }}
         >
-          Enter = Select
+          A = Select
         </div>
+
+        {/* Boot screen overlay */}
+        {showBoot && (
+          <div
+            className="boot-screen"
+            style={{
+              position: "absolute",
+              inset: 0,
+              zIndex: 100,
+              display: "flex",
+              flexDirection: "column",
+              alignItems: "center",
+              justifyContent: "center",
+            }}
+          >
+            <div className="hex-grid" style={{ position: "absolute", inset: 0, pointerEvents: "none" }} />
+            <div className="scanlines" style={{ position: "absolute", inset: 0, pointerEvents: "none" }} />
+            <div
+              className="xbox-orb orb-pulse"
+              style={{ position: "absolute", pointerEvents: "none" }}
+              aria-hidden="true"
+            />
+            <span className="caduceus" style={{ fontSize: 48, position: "relative", zIndex: 1 }}>⚕</span>
+            <div
+              style={{
+                fontSize: 24,
+                fontWeight: 700,
+                color: "var(--accent)",
+                marginTop: 16,
+                textShadow: "0 0 20px var(--accent-glow)",
+                position: "relative",
+                zIndex: 1,
+              }}
+            >
+              MindForge
+            </div>
+            <div
+              style={{
+                fontSize: 12,
+                color: "var(--text-dim)",
+                marginTop: 8,
+                position: "relative",
+                zIndex: 1,
+              }}
+            >
+              Initializing MindForge...
+            </div>
+          </div>
+        )}
       </div>
     </ErrorBoundary>
   );
